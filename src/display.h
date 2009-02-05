@@ -383,3 +383,7 @@ while (0)
 #define HSTATUS_MESSAGE		2
 #define HSTATUS_HS		3
 #define HSTATUS_ALWAYS		(1<<2)
+
+#define CAPTION_SPLITONLY    0
+#define CAPTION_ALWAYS       1
+#define CAPTION_NEVER        2

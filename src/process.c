@@ -2747,14 +2747,31 @@ int key;
         Msg(0, "messages displayed on %s", use_hardstatus ? "hardstatus line" : "window");
       break;
     case RC_CAPTION:
-      if (strcmp(args[0], "always") == 0 || strcmp(args[0], "splitonly") == 0)
+      if (strcmp(args[0], "always") == 0 || strcmp(args[0], "splitonly") == 0 || strcmp(args[0], "never") == 0)
 	{
 	  struct display *olddisplay = display;
 
-	  captionalways = args[0][0] == 'a';
+	  switch (args[0][0])
+	    {
+	      case 'a':
+		captionalways = CAPTION_ALWAYS;
+		break;
+	      case 'n':
+		captionalways = CAPTION_NEVER;
+		break;
+	      default:
+		captionalways = CAPTION_SPLITONLY;
+		break;
+	    }
 	  for (display = displays; display; display = display->d_next)
 	    ChangeScreenSize(D_width, D_height, 1);
 	  display = olddisplay;
+	  if (args[0][0] == 'n')
+	    {
+	      if (args[1])
+		Msg(0, "caption string not changed");
+	      break;
+	    }
 	}
       else if (strcmp(args[0], "string") == 0)
 	{
@@ -5597,7 +5614,7 @@ char *data;	/* dummy */
 
       /* Showing a message when there's no hardstatus or caption cancels the input */
       if (display &&
-	  (captionalways || D_has_hstatus == HSTATUS_LASTLINE || (D_canvas.c_slperp && D_canvas.c_slperp->c_slnext)))
+	  (captionalways == CAPTION_ALWAYS || D_has_hstatus == HSTATUS_LASTLINE || (captionalways == CAPTION_SPLITONLY && D_canvas.c_slperp && D_canvas.c_slperp->c_slnext)))
 	showmessage = 1;
 
       while (l <= r)

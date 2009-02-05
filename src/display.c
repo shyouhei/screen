@@ -125,7 +125,7 @@ int defnonblock = -1;
 #ifdef AUTO_NUKE
 int defautonuke = 0;
 #endif
-int captionalways;
+int captionalways = CAPTION_SPLITONLY;
 int hardstatusemu = HSTATUS_IGNORE;
 
 int focusminwidth, focusminheight;
@@ -444,7 +444,7 @@ MakeDefaultCanvas()
   cv->c_xs      = 0;
   cv->c_xe      = D_width - 1;
   cv->c_ys      = 0;
-  cv->c_ye      = D_height - 1 - (D_has_hstatus == HSTATUS_LASTLINE) - captionalways;
+  cv->c_ye      = D_height - 1 - (D_has_hstatus == HSTATUS_LASTLINE) - (captionalways == CAPTION_ALWAYS);
   debug2("MakeDefaultCanvas 0,0 %d,%d\n", cv->c_xe, cv->c_ye);
   cv->c_xoff    = 0;
   cv->c_yoff    = 0;
@@ -624,6 +624,7 @@ struct canvas *cv;
   int need, got;
   int xs, ys, xe, ye;
   int focusmin = 0;
+  int captspace = 0;  /* should we leave a space for caption? */
 
   xs = cv->c_xs;
   ys = cv->c_ys;
@@ -648,6 +649,7 @@ struct canvas *cv;
       return;
     }
 
+  captspace = (captionalways != CAPTION_NEVER);
   fcv = 0;
   if (focusminwidth || focusminheight)
     {
@@ -662,7 +664,7 @@ struct canvas *cv;
 	      if (focusmin > 0)
 		focusmin--;
 	      else if (focusmin < 0)
-		focusmin = cv->c_slorient == SLICE_VERT ? ye - ys + 2 : xe - xs + 2;
+		focusmin = captspace + (cv->c_slorient == SLICE_VERT ? ye - ys + 1 : xe - xs + 1);
 	      debug1("found, focusmin=%d\n", focusmin);
 	    }
           cv2 = cv2->c_slback;
@@ -671,7 +673,7 @@ struct canvas *cv;
   if (focusmin)
     {
       m = CountCanvas(cv) * 2;
-      nh = cv->c_slorient == SLICE_VERT ? ye - ys + 2 : xe - xs + 2;
+      nh = captspace + (cv->c_slorient == SLICE_VERT ? ye - ys + 1 : xe - xs + 1);
       nh -= m;
       if (nh < 0)
 	nh = 0;
@@ -692,10 +694,10 @@ struct canvas *cv;
   w = wsum;
 
   /* pass 2: calculate need/excess space */
-  nh = cv->c_slorient == SLICE_VERT ? ye - ys + 2 : xe - xs + 2;
+  nh = captspace + (cv->c_slorient == SLICE_VERT ? ye - ys + 1 : xe - xs + 1);
   for (cv2 = cv, need = got = 0; cv2; cv2 = cv2->c_slnext)
     {
-      m = cv2->c_slperp ? CountCanvasPerp(cv2) * 2 - 1 : 1;
+      m = captionalways != CAPTION_NEVER && cv2->c_slperp ? CountCanvasPerp(cv2) * 2 - 1 : captspace;
       if (cv2 == fcv)
 	m += focusmin;
       hh = cv2->c_slweight ? nh * cv2->c_slweight / w : 0;
@@ -712,7 +714,7 @@ struct canvas *cv;
     need = got;
 
   /* pass 3: distribute space */
-  nh = cv->c_slorient == SLICE_VERT ? ye - ys + 2 : xe - xs + 2;
+  nh = captspace + (cv->c_slorient == SLICE_VERT ? ye - ys + 1 : xe - xs + 1);
   i = cv->c_slorient == SLICE_VERT ? ys : xs;
   maxi = cv->c_slorient == SLICE_VERT ? ye : xe;
   w = wsum;
@@ -724,7 +726,7 @@ struct canvas *cv;
 	  if (cv->c_slprev && !cv->c_slback->c_slback && !cv->c_slprev->c_slperp && !cv->c_slprev->c_slprev)
 	    {
 	      cv->c_slprev->c_slorient = SLICE_UNKN;
-	      if (!captionalways)
+	      if (captionalways != CAPTION_ALWAYS)
 		{
 	          cv->c_slback->c_ye++;
 		  cv->c_slprev->c_ye++;
@@ -734,7 +736,7 @@ struct canvas *cv;
 	  FreeCanvas(cv);
 	  continue;
 	}
-      m = cv->c_slperp ? CountCanvasPerp(cv) * 2 - 1 : 1;
+      m = captionalways != CAPTION_NEVER && cv->c_slperp ? CountCanvasPerp(cv) * 2 - 1 : captspace;
       if (cv == fcv)
 	m += focusmin;
       hh = cv->c_slweight ? nh * cv->c_slweight / w : 0;
@@ -757,12 +759,13 @@ struct canvas *cv;
 	}
       ASSERT(hh >= m + 1);
       /* hh is window size plus pation line */
-      if (i + hh > maxi + 2)
+      debug2("   XXX: %d, %d\n", i, hh);
+      if (i + hh > maxi + 1 + captspace)
 	{
-	  hh = maxi + 2 - i;
+	  hh = maxi + 1 + captspace - i;
 	  debug1("  not enough space, reducing to %d\n", hh);
 	}
-      if (i + hh == maxi + 1)
+      if (i + hh == maxi + captspace)
 	{
 	  hh++;
 	  debug("  incrementing as no other canvas will fit\n");
@@ -772,23 +775,21 @@ struct canvas *cv;
           cv->c_xs = xs;
           cv->c_xe = xe;
           cv->c_ys = i;
-          cv->c_ye = i + hh - 2;
-          cv->c_xoff = xs;
-          cv->c_yoff = i;
+          cv->c_ye = i + hh - (1 + captspace);
         }
       else
         {
           cv->c_xs = i;
-          cv->c_xe = i + hh - 2;
+          cv->c_xe = i + hh - (1 + captspace);
           cv->c_ys = ys;
           cv->c_ye = ye;
-          cv->c_xoff = i;
-          cv->c_yoff = ys;
         }
       cv->c_xoff = cv->c_xs;
       cv->c_yoff = cv->c_ys;
-      cv->c_blank.l_width = cv->c_xe - cv->c_xs + 1;
-      cv->c_blank.l_height = cv->c_ye - cv->c_ys + 1;
+      cv->c_blank.l_width = cv->c_xe - cv->c_xs + 1;//(cv->c_slorient == SLICE_HORI ? captspace : 1);
+      cv->c_blank.l_height = cv->c_ye - cv->c_ys + 1;//(cv->c_slorient != SLICE_HORI ? captspace : 1);
+      debug2("   YYY: %d,%d", cv->c_xs, cv->c_xe);
+      debug2("  %d,%d\n", cv->c_ys, cv->c_ye);
       if (cv->c_slperp)
 	{
           ResizeCanvas(cv);
@@ -892,7 +893,7 @@ int orient;
   xe = cv->c_slback->c_xe;
   ys = cv->c_slback->c_ys;
   ye = cv->c_slback->c_ye;
-  if (!captionalways && cv == D_canvas.c_slperp && !cv->c_slnext)
+  if (captionalways == CAPTION_SPLITONLY && cv == D_canvas.c_slperp && !cv->c_slnext)
     ye--;	/* need space for caption */
   debug2("Adding Canvas to slice %d,%d ", xs, ys);
   debug2("%d,%d\n", xe, ye);
@@ -988,7 +989,7 @@ RemCanvas()
   if (!cv->c_slnext && !cv->c_slprev && !cv->c_slback->c_slback && !cv->c_slperp)
     {
       cv->c_slorient = SLICE_UNKN;
-      if (!captionalways)
+      if (captionalways != CAPTION_ALWAYS)
 	cv->c_slback->c_ye = ++ye;	/* caption line no longer needed */
     }
   cv = cv->c_slback;
@@ -1031,7 +1032,7 @@ OneCanvas()
   cv->c_slnext = 0;
   cv->c_slprev = 0;
   ASSERT(!cv->c_slperp);
-  if (!captionalways)
+  if (captionalways == CAPTION_SPLITONLY)
     D_canvas.c_ye++;	/* caption line no longer needed */
   ResizeCanvas(&D_canvas);
   RecreateCanvasChain();
@@ -2804,7 +2805,8 @@ RemoveStatus()
   oldflayer = flayer;
   if (where == STATUS_ON_WIN)
     {
-      if (captionalways || (D_canvas.c_slperp && D_canvas.c_slperp->c_slnext))
+      if (captionalways == CAPTION_ALWAYS ||
+	    (captionalways == CAPTION_SPLITONLY && D_canvas.c_slperp && D_canvas.c_slperp->c_slnext))
 	{
 	  GotoPos(0, STATLINE);
 	  RefreshLine(STATLINE, 0, D_status_len - 1, 0);
@@ -2855,6 +2857,8 @@ char *str;
     }
   else if (D_has_hstatus == HSTATUS_LASTLINE)
     {
+      int hascaption = (captionalways == CAPTION_ALWAYS) ||
+	  (captionalways == CAPTION_SPLITONLY && D_cvlist && !D_cvlist->c_next);
       debug("ShowHStatus: using last line\n");
       ox = D_x;
       oy = D_y;
@@ -2863,9 +2867,9 @@ char *str;
       if (l > D_width)
 	l = D_width;
       GotoPos(0, D_height - 1);
-      SetRendition(captionalways || D_cvlist == 0 || D_cvlist->c_next ? &mchar_null: &mchar_so);
+      SetRendition(!hascaption ? &mchar_null: &mchar_so);
       PutWinMsg(str, 0, l);
-      if (!captionalways && D_cvlist && !D_cvlist->c_next)
+      if (hascaption)
         while (l++ < D_width)
 	  PUTCHARLP(' ');
       if (l < D_width)
@@ -2999,7 +3003,7 @@ int y, from, to, isblank;
       lvp = 0;
       for (cv = display->d_cvlist; cv; cv = cv->c_next)
 	{
-	  if (y == cv->c_ye + 1 && from >= cv->c_xs && from <= cv->c_xe)
+	  if (captionalways != CAPTION_NEVER && y == cv->c_ye + 1 && from >= cv->c_xs && from <= cv->c_xe)
 	    {
 	      p = Layer2Window(cv->c_layer);
 	      buf = MakeWinMsgEv(captionstring, p, '%', cv->c_xe - cv->c_xs + (cv->c_xe + 1 < D_width || D_CLP), &cv->c_captev, 0);
@@ -3017,7 +3021,7 @@ int y, from, to, isblank;
 		PUTCHARLP(' ');
 	      break;
 	    }
-	  if (from == cv->c_xe + 1 && y >= cv->c_ys && y <= cv->c_ye + 1)
+	  if (captionalways != CAPTION_NEVER && from == cv->c_xe + 1 && y >= cv->c_ys && y <= cv->c_ye + 1)
 	    {
 	      GotoPos(from, y);
 	      SetRendition(&mchar_so);
@@ -4577,7 +4581,7 @@ struct canvas *cv;
   D_cvlist = 0;
   D_forecv = lay->lay_forecv;
   DupLayoutCv(&lay->lay_canvas, &D_canvas, 0);
-  D_canvas.c_ye = D_height - 1 - ((D_canvas.c_slperp && D_canvas.c_slperp->c_slnext) || captionalways) - (D_has_hstatus == HSTATUS_LASTLINE);
+  D_canvas.c_ye = D_height - 1 - ((captionalways == CAPTION_SPLITONLY && D_canvas.c_slperp && D_canvas.c_slperp->c_slnext) || captionalways == CAPTION_ALWAYS) - (D_has_hstatus == HSTATUS_LASTLINE);
   ResizeCanvas(&D_canvas);
   RecreateCanvasChain();
   RethinkDisplayViewports();

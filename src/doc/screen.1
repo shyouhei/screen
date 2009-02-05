@@ -1134,13 +1134,18 @@ c1 positions may want to turn this off.
 .br
 .B "caption string"
 .RI [ string ]
+.br
+.B "caption never"
 .PP
 This command controls the display of the window captions. Normally
 a caption is only used if more than one window is shown on the
 display (split screen mode). But if the type is set to
 .B always
-screen shows a caption even if only one window is displayed. The default
-is
+screen shows a caption even if only one window is displayed. If the
+type is set to
+.B never
+screen does not show the caption even in split screen mode. The
+default is
 .BR splitonly .
 .P
 The second form changes the text used for the caption. You can use
