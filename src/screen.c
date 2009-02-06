@@ -1420,6 +1420,10 @@ char **av;
 	  /* NOTREACHED */
 	}
     }
+  else if (ac) /* Screen was invoked with a command */
+    {
+      MakeWindow(&nwin);
+    }
 
 #ifdef HAVE_BRAILLE
   StartBraille();
@@ -1455,7 +1459,11 @@ char **av;
 void
 WindowDied(p, wstat, wstat_valid)
 struct win *p;
-int wstat;
+#ifdef BSDWAIT
+  union wait wstat;
+#else
+  int wstat;
+#endif
 int wstat_valid;
 {
   int killit = 0;
