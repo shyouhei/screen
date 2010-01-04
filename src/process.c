@@ -2598,7 +2598,7 @@ int key;
       s = NULL;
       if (ParseSaveStr(act, &s))
 	break;
-      if (strlen(s) >= 20)
+      if (strlen(s) >= MAXSTR)
 	{
 	  Msg(0, "%s: term: argument too long ( < 20)", rc_name);
 	  free(s);
