@@ -26,6 +26,8 @@
  ****************************************************************
  */
 
+#include "config.h"
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <signal.h>
@@ -38,8 +40,6 @@
 #include <sys/ioctl.h>
 #endif
 
-
-#include "config.h"
 
 /* for solaris 2.1, Unixware (SVR4.2) and possibly others: */
 #ifdef HAVE_STROPTS_H
@@ -59,6 +59,7 @@ extern char *BellString, *ActivityString, *ShellProg, *ShellArgs[];
 extern char *hstatusstring, *captionstring, *timestring;
 extern char *wliststr, *wlisttit;
 extern int captionalways;
+extern int queryflag;
 extern char *hardcopydir, *screenlogfile, *logtstamp_string;
 extern int log_flush, logtstamp_on, logtstamp_after;
 extern char *VisualBellString;
@@ -186,7 +187,7 @@ extern int nethackflag;
 #endif
 
 
-struct win *wtab[MAXWIN];	/* window table, should be dynamic */
+extern struct win **wtab;
 
 #ifdef MULTIUSER
 extern char *multi;
@@ -586,7 +587,7 @@ InitKeytab()
     args[1] = NULL;
     SaveAction(ktab + '-', RC_SELECT, args, 0);
   }
-  for (i = 0; i < ((MAXWIN < 10) ? MAXWIN : 10); i++)
+  for (i = 0; i < ((maxwin && maxwin < 10) ? maxwin : 10); i++)
     {
       char *args[2], arg1[10];
       args[0] = arg1;
@@ -695,6 +696,7 @@ int create;
 	  kp->ktab[i].nr = RC_ILLEGAL;
 	  kp->ktab[i].args = noargs;
 	  kp->ktab[i].argl = 0;
+	  kp->ktab[i].quiet = 0;
 	}
       kp->next = 0;
       *kpp = kp;
@@ -991,7 +993,7 @@ struct paster *pa;
 
 int
 FindCommnr(str)
-char *str;
+const char *str;
 {
   int x, m, l = 0, r = RC_LAST;
   while (l <= r)
@@ -1146,19 +1148,35 @@ int key;
       return;
     }
   n = comms[nr].flags;
+  /* Commands will have a CAN_QUERY flag, depending on whether they have
+   * something to return on a query. For example, 'windows' can return a result,
+   * but 'other' cannot.
+   * If some command causes an error, then it should reset queryflag to -1, so that
+   * the process requesting the query can be notified that an error happened.
+   */
+  if (!(n & CAN_QUERY) && queryflag >= 0)
+    {
+      /* Query flag is set, but this command cannot be queried. */
+      Msg(0, "%s command cannot be queried.", comms[nr].name);
+      queryflag = -1;
+      return;
+    }
   if ((n & NEED_DISPLAY) && display == 0)
     {
       Msg(0, "%s: %s: display required", rc_name, comms[nr].name);
+      queryflag = -1;
       return;
     }
   if ((n & NEED_FORE) && fore == 0)
     {
       Msg(0, "%s: %s: window required", rc_name, comms[nr].name);
+      queryflag = -1;
       return;
     }
   if ((n & NEED_LAYER) && flayer == 0)
     {
       Msg(0, "%s: %s: display or window required", rc_name, comms[nr].name);
+      queryflag = -1;
       return;
     }
   if ((argc = CheckArgNum(nr, args)) < 0)
@@ -1170,6 +1188,7 @@ int key;
         {
 	  Msg(0, "%s: %s: permission denied (user %s)", 
 	      rc_name, comms[nr].name, (EffectiveAclUser ? EffectiveAclUser : D_user)->u_name);
+	  queryflag = -1;
 	  return;
 	}
     }
@@ -1189,7 +1208,10 @@ int key;
       else if (args[0][0] == '.' && !args[0][1])
 	{
 	  if (!fore)
-	    Msg(0, "select . needs a window");
+	    {
+	      Msg(0, "select . needs a window");
+	      queryflag = -1;
+	    }
 	  else
 	    {
 	      SetForeWindow(fore);
@@ -1198,6 +1220,8 @@ int key;
 	}
       else if (ParseWinNum(act, &n) == 0)
         SwitchWindow(n);
+      else if (queryflag >= 0)
+	queryflag = -1;	/* ParseWinNum already prints out an appropriate error message. */
       break;
 #ifdef AUTO_NUKE
     case RC_DEFAUTONUKE:
@@ -1588,7 +1612,7 @@ int key;
 		  Msg(0, "%s: at '%s': no such window.\n", rc_name, args[0]);
 		break;
 	      }
-	    else if (i < MAXWIN && (fore = wtab[i]))
+	    else if (i < maxwin && (fore = wtab[i]))
 	      {
 	        args[0][n] = ch;      /* must restore string in case of bind */
 	        debug2("AT window %d (%s)\n", fore->w_number, fore->w_title);
@@ -2025,6 +2049,13 @@ int key;
       }
       break;
     case RC_TITLE:
+      if (queryflag >= 0)
+	{
+	  if (fore)
+	    Msg(0, "%s", fore->w_title);
+	  else
+	    queryflag = -1;
+	}
       if (*args == 0)
 	InputAKA();
       else
@@ -2634,7 +2665,10 @@ int key;
       if (s)
 	Msg(0, "%s", s);
       else
-	Msg(0, "%s: 'echo [-n] [-p] \"string\"' expected.", rc_name);
+	{
+	  Msg(0, "%s: 'echo [-n] [-p] \"string\"' expected.", rc_name);
+	  queryflag = -1;
+	}
       break;
     case RC_BELL:
     case RC_BELL_MSG:
@@ -2927,7 +2961,7 @@ int key;
       break;
     case RC_NUMBER:
       if (*args == 0)
-        Msg(0, "This is window %d (%s).\n", fore->w_number, fore->w_title);
+        Msg(0, queryflag >= 0 ? "%d (%s)" : "This is window %d (%s).", fore->w_number, fore->w_title);
       else
         {
 	  int old = fore->w_number;
@@ -2950,6 +2984,7 @@ int key;
 	  if (n < 0 || n >= maxwin)
 	    {
 	      Msg(0, "Given window position is invalid.");
+	      queryflag = -1;
 	      return;
 	    }
 	  p = wtab[n];
@@ -4054,14 +4089,25 @@ int key;
         Msg(0, "Will %sdo alternate screen switching", use_altscreen ? "" : "not ");
       break;
     case RC_MAXWIN:
+      if (!args[0])
+	{
+	  Msg(0, "maximum windows allowed: %d", maxwin);
+	  break;
+	}
       if (ParseNum(act, &n))
 	break;
       if (n < 1)
         Msg(0, "illegal maxwin number specified");
-      else if (n > maxwin)
-        Msg(0, "may only decrease maxwin number");
+      else if (n > 2048)
+	Msg(0, "maximum 2048 windows allowed");
+      else if (n > maxwin && windows)
+	Msg(0, "may increase maxwin only when there's no window");
       else
-        maxwin = n;
+	{
+	  if (!windows)
+	    wtab = realloc(wtab, n * sizeof(struct win));
+	  maxwin = n;
+	}
       break;
     case RC_BACKTICK:
       if (ParseBase(act, *args, &n, 10, "decimal"))
@@ -4435,10 +4481,23 @@ char **argv;
 int *argl;
 {
   struct action act;
+  const char *cmd = *argv;
 
-  if ((act.nr = FindCommnr(*argv)) == RC_ILLEGAL)  
+  act.quiet = 0;
+  if (*cmd == '@')	/* Suppress error */
     {
-      Msg(0, "%s: unknown command '%s'", rc_name, *argv);
+      act.quiet |= 0x01;
+      cmd++;
+    }
+  if (*cmd == '-')	/* Suppress normal message */
+    {
+      act.quiet |= 0x02;
+      cmd++;
+    }
+
+  if ((act.nr = FindCommnr(cmd)) == RC_ILLEGAL)
+    {
+      Msg(0, "%s: unknown command '%s'", rc_name, cmd);
       return;
     }
   act.args = argv + 1;
@@ -4907,7 +4966,7 @@ char *str;
   int i;
   struct win *p;
   
-  if ((i = WindowByNumber(str)) < 0 || i >= MAXWIN)
+  if ((i = WindowByNumber(str)) < 0 || i >= maxwin)
     {
       if ((p = WindowByName(str)))
 	return p->w_number;
@@ -5012,7 +5071,7 @@ int n;
   struct win *p;
 
   debug1("SwitchWindow %d\n", n);
-  if (n < 0 || n >= MAXWIN)
+  if (n < 0 || n >= maxwin)
     {
       ShowWindows(-1);
       return;
@@ -5116,12 +5175,12 @@ static int
 NextWindow()
 {
   register struct win **pp;
-  int n = fore ? fore->w_number : MAXWIN;
+  int n = fore ? fore->w_number : maxwin;
   struct win *group = fore ? fore->w_group : 0;
 
   for (pp = fore ? wtab + n + 1 : wtab; pp != wtab + n; pp++)
     {
-      if (pp == wtab + MAXWIN)
+      if (pp == wtab + maxwin)
 	pp = wtab;
       if (*pp)
 	{
@@ -5144,7 +5203,7 @@ PreviousWindow()
   for (pp = wtab + n - 1; pp != wtab + n; pp--)
     {
       if (pp == wtab - 1)
-	pp = wtab + MAXWIN - 1;
+	pp = wtab + maxwin - 1;
       if (*pp)
 	{
 	  if (!fore || group == (*pp)->w_group)
@@ -5284,7 +5343,7 @@ int where;
       *s = 0;
       return ss;
     }
-  for (pp = ((flags & 4) && where >= 0) ? wtab + where + 1: wtab; pp < wtab + MAXWIN; pp++)
+  for (pp = ((flags & 4) && where >= 0) ? wtab + where + 1: wtab; pp < wtab + maxwin; pp++)
     {
       int rend = -1;
       if (pp - wtab == where && ss == buf)
@@ -5293,7 +5352,7 @@ int where;
 	continue;
       if ((flags & 1) && display && p == D_fore)
 	continue;
-      if (D_fore && D_fore->w_group != p->w_group)
+      if (display && D_fore && D_fore->w_group != p->w_group)
 	continue;
 
       cmd = p->w_title;
@@ -5435,13 +5494,11 @@ int where;
   char buf[1024];
   char *s, *ss;
 
-  if (!display)
-    return;
-  if (where == -1 && D_fore)
+  if (display && where == -1 && D_fore)
     where = D_fore->w_number;
   ss = AddWindows(buf, sizeof(buf), 0, where);
   s = buf + strlen(buf);
-  if (ss - buf > D_width / 2)
+  if (display && ss - buf > D_width / 2)
     {
       ss -= D_width / 2;
       if (s - ss < D_width)
@@ -5921,7 +5978,7 @@ char *fn, **av;
       if (*buf != '\0')
 	nwin.aka = buf;
       num = atoi(*av);
-      if (num < 0 || num > MAXWIN - 1)
+      if (num < 0 || num > maxwin - 1)
 	{
 	  Msg(0, "%s: illegal screen number %d.", fn, num);
 	  num = 0;
@@ -6113,6 +6170,7 @@ char *data;
   act.nr = *(int *)data;
   act.args = noargs;
   act.argl = 0;
+  act.quiet = 0;
   DoAction(&act, -1);
 }
 

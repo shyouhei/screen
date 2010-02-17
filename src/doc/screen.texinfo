@@ -362,7 +362,8 @@ specific window or you want to send a command via the @samp{-X}
 option to a specific window. As with screen's select command, @samp{-}
 selects the blank window. As a special case for reattach, @samp{=}
 brings up the windowlist on the blank window, while a @samp{+} will
-create new window.
+create new window. The command will not be executed if the specified
+window could not be found.
 
 @item -q
 Suppress printing of error messages. In combination with @samp{-ls} the exit 
@@ -373,6 +374,23 @@ In combination with @samp{-r} the exit value is as follows: 10 indicates that
 there is no session to resume. 12 (or more) indicates that there are 2 (or 
 more) sessions to resume and you should specify which one to choose. 
 In all other cases @samp{-q} has no effect.
+
+@item -Q
+Some commands now can be queried from a remote session using this
+flag, e.g. 'screen -Q windows'. The commands will send the
+response to the stdout of the querying process. If there was an
+error in the command, then the querying process will exit with
+a non-zero status.
+
+The commands that can be queried now are:
+ @code{echo}
+ @code{info}
+ @code{lastmsg}
+ @code{number}
+ @code{select}
+ @code{time}
+ @code{title}
+ @code{windows}
 
 @item -r [@var{pid.sessionname}]
 @itemx -r @var{sessionowner}/[@var{pid.sessionname}]
@@ -814,7 +832,7 @@ Delete the screen-exchange file.  @xref{Screen Exchange}.
 
 @item @kbd{C-a _}
 (silence)@*
-Start/stop monitoring the current window for inactivity. @xref{Silence}.
+Start/stop monitoring the current window for inactivity. @xref{Monitor}.
 
 @item @kbd{C-a |}
 (split -v)@*
@@ -947,7 +965,7 @@ Set default lines of scrollback.  @xref{Scrollback}.
 @item defshell @var{command}
 Set the default program for new windows.  @xref{Shell}.
 @item defsilence @var{state}
-Select default idle monitoring behavior.  @xref{Silence}.
+Select default idle monitoring behavior.  @xref{Monitor}.
 @item defslowpaste @var{msec}
 Select the default inter-character timeout when pasting.  @xref{Paste}.
 @item defutf8 @var{state}
@@ -1040,6 +1058,8 @@ Show or set which layout to reattach to.  @xref{Layout}.
 Remember the organization of a layout.  @xref{Layout}.
 @item layout autosave [@var{on}|@var{off}]
 Show or set the status of layout saving.  @xref{Layout}.
+@item layout dump [filename]
+Save the layout arrangement to a file.  @xref{Layout}.
 @item license
 Display licensing information.  @xref{Startup}.
 @item lockscreen
@@ -1067,7 +1087,7 @@ Insert the command character.  @xref{Command Character}.
 @item monitor [@var{state}]
 Monitor activity in window.  @xref{Monitor}.
 @item mousetrack [@var{on}|@var{off}]
-Enable selecting splitted regions with mouse clicks.  @xref{Mousetrack}.
+Enable selecting split regions with mouse clicks.  @xref{Mousetrack}.
 @item msgminwait @var{sec}
 Set minimum message wait.  @xref{Message Wait}.
 @item msgwait @var{sec}
@@ -1145,9 +1165,9 @@ Set the default program for new windows.  @xref{Shell}.
 @item shelltitle @var{title}
 Set the default name for new windows.  @xref{Shell}.
 @item silence [@var{state}|@var{seconds}]
-Monitor a window for inactivity.  @xref{Silence}.
+Monitor a window for inactivity.  @xref{Monitor}.
 @item silencewait @var{seconds}
-Default timeout to trigger an inactivity notify.  @xref{Silence}.
+Default timeout to trigger an inactivity notify.  @xref{Monitor}.
 @item sleep @var{num}
 Pause during startup.  @xref{Startup}.
 @item slowpaste @var{msec}
@@ -1160,7 +1180,7 @@ Deprecated. Use @code{rendition so} instead. @xref{Rendition}.
 Split region into two parts.  @xref{Regions}.
 @item startup_message @var{state}
 Display copyright notice on startup.  @xref{Startup}.
-@item stuff @var{string}
+@item stuff [@var{string}]
 Stuff a string in the input buffer of a window.  @xref{Paste}.
 @item su [@var{username} [@var{password} [@var{password2}]]]
 Identify a user. @xref{Multiuser Session}.
@@ -1454,7 +1474,7 @@ For telnet windows, the command @code{break} sends the telnet code
 @section Window Groups
 @cindex window groups
 Screen provides a method for grouping windows together. Windows can be
-organized in a heirarchial fashion, resembling a tree structure. New
+organized in a hierarchical fashion, resembling a tree structure. New
 screens are created using the @code{screen} command while new groups
 are created using @code{screen //group}. @xref{Screen Command}. 
 
@@ -1915,7 +1935,7 @@ bottom of each other. Using -v will create a vertical split,
 causing the new regions to appear side by side of each other.
 
 With this current implementation of @code{screen}, scrolling data
-will appear much slower in a vertically splited region than one
+will appear much slower in a vertically split region than one
 that is not. This should be taken into consideration if you need
 to use system commands such as @code{cat} or @code{tail -f}.
 @end deffn
@@ -2007,7 +2027,7 @@ automatically if the window is displayed more than once.
 This forces any currently selected region to be automatically
 resized at least a certain @var{width} and @var{height}. All
 other surrounding regions will be resized in order to accomodate.
-This constraint follows everytime the @code{focus} command is
+This constraint follows every time the @code{focus} command is
 used. The @code{resize} command can be used to increase either
 dimension of a region, but never below what is set with
 @code{focusminsize}. The underscore @samp{_} is a synonym for
@@ -2019,16 +2039,16 @@ Without any parameters, the minimum width and height is shown.
 @node Layout, , Focusminsize, Regions
 @section Layout
 @cindex layout
-Using regions, and perhaps a large enough terminal, you can create
-a more of a desktop feel to @code{screen}. By being able to split
+Using regions, and perhaps a large enough terminal, you can give
+@code{screen} more of a desktop feel. By being able to split
 regions horizontally or vertically, you can take advantage of the
 lesser used spaces of your terminal. The catch to these splits has
 been that they're not kept between screen detachments and reattachments.
 
-Layouts will help your organization of regions. You can create one
+Layouts will help organize your regions. You can create one
 layout of four horizontal regions and then create a separate layout
-of regions in a two by two array. The regions don't have to contain 
-the same windows. You can easily switch between layouts and keep
+of regions in a two by two array. The regions could contain the same windows,
+but they don't have to. You can easily switch between layouts and keep
 them between detachments and reattachments.
 
 Note that there are several subcommands to @code{layout}.
@@ -2107,7 +2127,10 @@ the layout to reattach to will be shown in the message line.
 Remember the current arrangement of regions. When used, @code{screen}
 will remember the arrangement of vertically and horizontally split
 regions. This arrangement is restored when a @code{screen} session
-is reattached or switched back from a different layout. If a number
+is reattached or switched back from a different layout. If the
+session ends or the @code{screen} process dies, the layout
+arrangements are lost. The @code{layout dump} command should help
+in this siutation. If a number
 or title is supplied, @code{screen} will remember the arrangement of
 that particular layout. Without any options, @code{screen} will
 remember the current layout.
@@ -2118,7 +2141,7 @@ Saving your regions can be done automatically by using the
 
 @deffn Command layout @code{autosave} [@code{on}|@code{off}]
 (none)@*
-Change or display the status of automatcally saving layouts. The
+Change or display the status of automatically saving layouts. The
 default is @code{on}, meaning when @code{screen} is detached or
 changed to a different layout, the arrangement of regions and windows
 will be remembered at the time of change and restored upon return.
@@ -2129,6 +2152,21 @@ a single window. Without either an @code{on} or an @code{off}, the
 current status is displayed on the message line.
 @end deffn
 
+@deffn Command layout @code{dump} [filename]
+(none)@*
+Write to a file the order of splits made in the current layout. This
+is useful to recreate the order of your regions used in your current
+layout. Only the current layout is recorded. While the order of the
+regions are recorded, the sizes of those regions and which windows
+correspond to which regions are not. If no filename is specified,
+the default is @file{layout-dump}, saved in the directory that the
+@code{screen} process was started in. If the file already exists,
+@code{layout dump} will append to that file. As an example:
+@example
+layout dump /home/user/.screenrc
+@end example
+will save or append the layout to the user's @file{.screenrc} file.
+@end deffn
 
 @node Window Settings, Virtual Terminal, Regions, Top
 @chapter Window Settings
@@ -2143,7 +2181,7 @@ terminal emulation itself.
 * Kill::                        Destroy an unwanted window
 * Login::                       Control @file{/etc/utmp} logging
 * Mode::                        Control the file mode of the pty
-* Monitor::                     Watch for activity in a window
+* Monitor::                     Watch for activity or inactivity in a window
 * Windows::			List the active windows
 * Hardstatus::			Set a window's hardstatus line
 @end menu
@@ -2404,6 +2442,29 @@ notification message will be displayed in the status line at the first
 sign of output, and the window will also be marked with an @samp{@@} in
 the window-status display (@pxref{Windows}).  Monitoring defaults to
 @samp{off} for all windows.
+@end deffn
+
+@kindex _
+@deffn Command silence [@var{state}|@var{sec}]
+(@kbd{C-a _})@*
+Toggles silence monitoring of windows. When silence is turned on and an 
+affected window is switched into the background, you will receive the
+silence notification message in the status line after a specified period
+of inactivity (silence). The default timeout can be changed with the
+@code{silencewait} command or by specifying a number of seconds instead of
+@code{on} or @code{off}. Silence is initially off for all windows.
+@end deffn
+
+@deffn Command defsilence state
+(none)@*
+Same as the @code{silence} command except that the default setting for
+new windows is changed.  Initial setting is `off'.
+@end deffn
+
+@deffn Command silencewait @var{seconds}
+(none)@*
+Define the time that all windows monitored for silence should wait
+before displaying a message. Default is 30 seconds.
 @end deffn
 
 @node Windows, Hardstatus, Monitor, Window Settings
@@ -3517,10 +3578,11 @@ display (terminal attached), as the registers are a global resource. The
 paste buffer exists once for every user.
 @end deffn
 
-@deffn Command stuff string
+@deffn Command stuff [string]
 (none)@*
 Stuff the string @var{string} in the input buffer of the current window.
 This is like the @code{paste} command, but with much less overhead.
+Without a paramter, @code{screen} will prompt for a string to stuff.
 You cannot paste large buffers with the @code{stuff} command. It is most
 useful for key bindings. @xref{Bindkey}.
 @end deffn
@@ -4774,7 +4836,6 @@ categories.
 * Nethack::                     Use @code{nethack}-like error messages.
 * Nonblock::			Disable flow-control to a display.
 * Number::                      Change the current window's number.
-* Silence::			Notify on inactivity.
 * Time::                        Display the time and load average.
 * Verbose::                     Display window creation commands.
 * Version::                     Display the version of @code{screen}.
@@ -4924,7 +4985,7 @@ Same as the @code{nonblock} command except that the default setting for
 displays is changed. Initial setting is @code{off}.
 @end deffn
 
-@node Number, Silence, Nonblock, Miscellaneous
+@node Number, Time, Nonblock, Miscellaneous
 @section Number
 @kindex N
 @deffn Command number [[+|-]@var{n}]
@@ -4936,32 +4997,7 @@ plus (`+') or minus (`-') will change the window's number by the relative
 amount specified.
 @end deffn
 
-@node Silence, Time, Number, Miscellaneous
-@section Silence
-@kindex _
-@deffn Command silence [@var{state}|@var{sec}]
-(@kbd{C-a _})@*
-Toggles silence monitoring of windows. When silence is turned on and an 
-affected window is switched into the background, you will receive the
-silence notification message in the status line after a specified period
-of inactivity (silence). The default timeout can be changed with the
-@code{silencewait} command or by specifying a number of seconds instead of
-@code{on} or @code{off}. Silence is initially off for all windows.
-@end deffn
-
-@deffn Command defsilence state
-(none)@*
-Same as the @code{silence} command except that the default setting for
-new windows is changed.  Initial setting is `off'.
-@end deffn
-
-@deffn Command silencewait @var{seconds}
-(none)@*
-Define the time that all windows monitored for silence should wait
-before displaying a message. Default is 30 seconds.
-@end deffn
-
-@node Time, Verbose, Silence, Miscellaneous
+@node Time, Verbose, Number, Miscellaneous
 @section Time
 @kindex t
 @kindex C-t
@@ -5104,7 +5140,8 @@ Parses and executes each argument as separate command.
 @deffn Command maxwin @var{n}
 (none)@*
 Set the maximum window number screen will create. Doesn't affect 
-already existing windows. The number may only be decreased.
+already existing windows. The number can be increased only when there are no
+existing windows.
 @end deffn
 
 @node Backtick, Screen Saver, Maxwin, Miscellaneous

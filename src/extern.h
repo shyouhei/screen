@@ -156,7 +156,9 @@ extern void  CloseDevice __P((struct win *));
 #ifdef ZMODEM
 extern void  zmodem_abort __P((struct win *, struct display *));
 #endif
+#ifndef HAVE_EXECVPE
 extern void  execvpe __P((char *, char **, char **));
+#endif
 
 /* utmp.c */
 #ifdef UTMPOK
@@ -195,7 +197,7 @@ extern void  ProcessInput2 __P((char *, int));
 #endif
 extern void  DoProcess __P((struct win *, char **, int *, struct paster *));
 extern void  DoAction  __P((struct action *, int));
-extern int   FindCommnr __P((char *));
+extern int   FindCommnr __P((const char *));
 extern void  DoCommand __P((char **, int *));
 extern void  Activate __P((int));
 extern void  KillWindow __P((struct win *));
@@ -239,7 +241,7 @@ extern void  FreeTransTable __P((void));
 extern int   Attach __P((int));
 extern void  Attacher __P((void));
 extern sigret_t AttacherFinit __P(SIGPROTOARG);
-extern void  SendCmdMessage __P((char *, char *, char **));
+extern void  SendCmdMessage __P((char *, char *, char **, int));
 
 /* display.c */
 extern struct display *MakeDisplay __P((char *, char *, char *, int, int, struct mode *));

@@ -207,6 +207,7 @@ char *wlisttit;
 int auto_detach = 1;
 int iflag, rflag, dflag, lsflag, quietflag, wipeflag, xflag;
 int cmdflag;
+int queryflag = -1;
 int adaptflag;
 
 #ifdef MULTIUSER
@@ -237,7 +238,7 @@ int cjkwidth;
 #ifdef NETHACK
 int nethackflag = 0;
 #endif
-int maxwin = MAXWIN;
+int maxwin;
 
 
 struct layer *flayer;
@@ -465,10 +466,10 @@ char **av;
   screenlogfile = SaveStr("screenlog.%n");
   logtstamp_string = SaveStr("-- %n:%t -- time-stamp -- %M/%d/%y %c:%s --\n");
   hstatusstring = SaveStr("%h");
-  captionstring = SaveStr("%3n %t");
+  captionstring = SaveStr("%4n %t");
   timestring = SaveStr("%c:%s %M %d %H%? %l%?");
-  wlisttit = SaveStr("Num Name%=Flags");
-  wliststr = SaveStr("%3n %t%=%f");
+  wlisttit = SaveStr(" Num Name%=Flags");
+  wliststr = SaveStr("%4n %t%=%f");
 #ifdef COPY_PASTE
   BufferFile = SaveStr(DEFAULT_BUFFERFILE);
 #endif
@@ -680,6 +681,10 @@ char **av;
 		case 'q':
 		  quietflag = 1;
 		  break;
+		case 'Q':
+		  queryflag = 1;
+		  cmdflag = 1;
+		  break;
 		case 'r':
 		case 'R':
 #ifdef MULTI
@@ -760,7 +765,7 @@ char **av;
   eff_uid = geteuid();
   eff_gid = getegid();
   if (eff_uid != real_uid)
-    {		
+    {
       /* if running with s-bit, we must install a special signal
        * handler routine that resets the s-bit, so that we get a
        * core file anyway.
@@ -1176,7 +1181,7 @@ char **av;
       if (!*av)
 	Panic(0, "Please specify a command.");
       SET_GUID();
-      SendCmdMessage(sty, SockMatch, av);
+      SendCmdMessage(sty, SockMatch, av, queryflag >= 0);
       exit(0);
     }
   else if (rflag || xflag)
@@ -2105,6 +2110,9 @@ VA_DECL
     }
   else
     printf("%s\r\n", buf);
+
+  if (queryflag >= 0)
+    write(queryflag, buf, strlen(buf));
 }
 
 /*
@@ -2204,7 +2212,7 @@ static const char months[] = "JanFebMarAprMayJunJulAugSepOctNovDec";
 #endif
 
 static char winmsg_buf[MAXSTR];
-#define MAX_WINMSG_REND 16	/* rendition changes */
+#define MAX_WINMSG_REND 256	/* rendition changes */
 static int winmsg_rend[MAX_WINMSG_REND];
 static int winmsg_rendpos[MAX_WINMSG_REND];
 static int winmsg_numrend;

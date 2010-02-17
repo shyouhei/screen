@@ -65,15 +65,17 @@ static void  AskPassword __P((struct msg *));
 extern char *RcFileName, *extra_incap, *extra_outcap;
 extern int ServerSocket, real_uid, real_gid, eff_uid, eff_gid;
 extern int dflag, iflag, rflag, lsflag, quietflag, wipeflag, xflag;
+extern int queryflag;
 extern char *attach_tty, *LoginName, HostName[];
 extern struct display *display, *displays;
-extern struct win *fore, *wtab[], *console_window, *windows;
+extern struct win *fore, **wtab, *console_window, *windows;
 extern struct layer *flayer;
 extern struct layout *layout_attach, *layout_last, layout_last_marker;
 extern struct NewWindow nwin_undef;
 #ifdef MULTIUSER
 extern char *multi;
 #endif
+extern int maxwin;
 
 extern char *getenv();
 
@@ -736,7 +738,7 @@ struct msg *mp;
 	  if (*buf)
 	    nwin.aka = buf;
 	  num = atoi(p);
-	  if (num < 0 || num > MAXWIN - 1)
+	  if (num < 0 || num > maxwin - 1)
 	    num = 0;
 	  nwin.StartAt = num;
 	  p += l + 1;
@@ -1169,12 +1171,58 @@ ReceiveMsg()
 	FinishDetach(&m);
       break;
 #endif
+    case MSG_QUERY:
+	{
+	  char *oldSockPath = SaveStr(SockPath);
+	  strcpy(SockPath, m.m.command.writeback);
+	  int s = MakeClientSocket(0);
+	  strcpy(SockPath, oldSockPath);
+	  Free(oldSockPath);
+	  if (s >= 0)
+	    {
+	      queryflag = s;
+	      DoCommandMsg(&m);
+	      close(s);
+	    }
+	  else
+	    queryflag = -1;
+
+	  Kill(m.m.command.apid, (queryflag >= 0) ? SIGCONT : SIG_BYE);	/* Send SIG_BYE if an error happened */
+	  queryflag = -1;
+	}
+      break;
     case MSG_COMMAND:
       DoCommandMsg(&m);
       break;
     default:
       Msg(0, "Invalid message (type %d).", m.type);
     }
+}
+
+void
+ReceiveRaw(s)
+int s;
+{
+  char rd[256];
+  int len = 0;
+#ifdef NAMEDPIPE
+  if (fcntl(s, F_SETFL, 0) == -1)
+    Panic(errno, "BLOCK fcntl");
+#else
+  struct sockaddr_un a;
+  len = sizeof(a);
+  if ((s = accept(s, (struct sockaddr *) &a, (void *)&len)) < 0)
+    {
+      Msg(errno, "accept");
+      return;
+    }
+#endif
+  while ((len = read(s, rd, 255)) > 0)
+    {
+      rd[len] = 0;
+      printf("%s", rd);
+    }
+  close(s);
 }
 
 #if defined(_SEQUENT_) && !defined(NAMEDPIPE)
@@ -1376,6 +1424,7 @@ struct msg *m;
 	  char *na = 0;
 	  newscreen.nr = RC_SCREEN;
 	  newscreen.args = &na;
+	  newscreen.quiet = 0;
 	  DoAction(&newscreen, -1);
 	}
       else
@@ -1602,13 +1651,17 @@ struct msg *mp;
     }
   if (fc != fullcmd)
     *--fc = 0;
-  if (Parse(fullcmd, fc - fullcmd, args, argl) <= 0)
-    return;
+  if (Parse(fullcmd, sizeof fullcmd, args, argl) <= 0)
+    {
+      queryflag = -1;
+      return;
+    }
 #ifdef MULTIUSER
   user = *FindUserPtr(mp->m.attach.auser);
   if (user == 0)
     {
       Msg(0, "Unknown user %s tried to send a command!", mp->m.attach.auser);
+      queryflag = -1;
       return;
     }
 #else
@@ -1617,7 +1670,8 @@ struct msg *mp;
 #ifdef PASSWORD
   if (user->u_password && *user->u_password)
     {
-      Msg(0, "User %s has a password, cannot use -X option.", mp->m.attach.auser);
+      Msg(0, "User %s has a password, cannot use remote commands (using -Q or -X option).", mp->m.attach.auser);
+      queryflag = -1;
       return;
     }
 #endif
@@ -1638,7 +1692,15 @@ struct msg *mp;
     {
       int i = -1;
       if (strcmp(mp->m.command.preselect, "-"))
-        i = WindowByNoN(mp->m.command.preselect);
+	{
+	  i = WindowByNoN(mp->m.command.preselect);
+	  if (i < 0 || !wtab[i])
+	    {
+	      Msg(0, "Could not find pre-select window.");
+	      queryflag = -1;
+	      return;
+	    }
+	}
       fore = i >= 0 ? wtab[i] : 0;
     }
   else if (!fore)
