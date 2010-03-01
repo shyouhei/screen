@@ -49,6 +49,7 @@
 #endif
 
 #include "extern.h"
+#include "list_generic.h"
 
 static int   CheckPid __P((int));
 static void  ExecCreate __P((struct msg *));
@@ -450,7 +451,7 @@ MakeServerSocket()
       if (stat(SockPath, &st) == -1)
 	Panic(errno, "stat");
       if ((int)st.st_uid != real_uid)
-	Panic(0, "Unfortunatelly you are not its owner.");
+	Panic(0, "Unfortunately you are not its owner.");
       if ((st.st_mode & 0700) == 0600)
 	Panic(0, "To resume it, use \"screen -r\"");
       else
@@ -542,7 +543,7 @@ MakeServerSocket()
       if (stat(SockPath, &st) == -1)
 	Panic(errno, "stat");
       if (st.st_uid != real_uid)
-	Panic(0, "Unfortunatelly you are not its owner.");
+	Panic(0, "Unfortunately you are not its owner.");
       if ((st.st_mode & 0700) == 0600)
 	Panic(0, "To resume it, use \"screen -r\"");
       else
@@ -1442,9 +1443,9 @@ struct msg *m;
 	{
 	  struct display *olddisplay = display;
 	  flayer = D_forecv->c_layer;
-	  display_wlist(1, WLIST_NUM, (struct win *)0);
+	  display_windows(1, WLIST_NUM, (struct win *)0);
 	  noshowwin = 1;
-	  display = olddisplay;	/* display_wlist can change display */
+	  display = olddisplay;	/* display_windows can change display */
 	}
     }
   Activate(0);

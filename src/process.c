@@ -1,4 +1,7 @@
-/* Copyright (c) 2008, 2009
+/* Copyright (c) 2010
+ *      Juergen Weigert (jnweiger@immd4.informatik.uni-erlangen.de)
+ *      Sadrul Habib Chowdhury (sadrul@users.sourceforge.net)
+ * Copyright (c) 2008, 2009
  *      Juergen Weigert (jnweiger@immd4.informatik.uni-erlangen.de)
  *      Michael Schroeder (mlschroe@immd4.informatik.uni-erlangen.de)
  *      Micah Cowan (micah@cowan.name)
@@ -51,6 +54,7 @@
 #include "logfile.h"
 #include "layout.h"
 #include "viewport.h"
+#include "list_generic.h"
 
 extern struct comm comms[];
 extern char *rc_name;
@@ -2202,7 +2206,7 @@ int key;
 #endif
     case RC_WINDOWLIST:
       if (!*args)
-        display_wlist(0, WLIST_NUM, (struct win *)0);
+        display_windows(0, WLIST_NUM, (struct win *)0);
       else if (!strcmp(*args, "string"))
 	{
 	  if (args[1])
@@ -2244,7 +2248,7 @@ int key;
 		break;
 	      }
 	  if (i == argc)
-	    display_wlist(blank, flag, (struct win *)0);
+	    display_windows(blank, flag, (struct win *)0);
 	}
       break;
     case RC_HELP:
@@ -2981,42 +2985,12 @@ int key;
 	    n += old;
 	  else if (rel < 0)
 	    n = old - n;
-	  if (n < 0 || n >= maxwin)
+	  if (!WindowChangeNumber(fore, n))
 	    {
-	      Msg(0, "Given window position is invalid.");
+	      /* Window number could not be changed. */
 	      queryflag = -1;
 	      return;
 	    }
-	  p = wtab[n];
-	  wtab[n] = fore;
-	  fore->w_number = n;
-	  wtab[old] = p;
-	  if (p)
-	    p->w_number = old;
-#ifdef MULTIUSER
-	  /* exchange the acls for these windows. */
-	  AclWinSwap(old, n);
-#endif
-#ifdef UTMPOK
-	  /* exchange the utmp-slots for these windows */
-	  if ((fore->w_slot != (slot_t) -1) && (fore->w_slot != (slot_t) 0))
-	    {
-	      RemoveUtmp(fore);
-	      SetUtmp(fore);
-	    }
-	  if (p && (p->w_slot != (slot_t) -1) && (p->w_slot != (slot_t) 0))
-	    {
-	      /* XXX: first display wins? */
-	      display = fore->w_layer.l_cvlist ? fore->w_layer.l_cvlist->c_display : 0;
-	      RemoveUtmp(p);
-	      SetUtmp(p);
-	    }
-#endif
-
-	  WindowChanged(fore, 'n');
-	  WindowChanged((struct win *)0, 'w');
-	  WindowChanged((struct win *)0, 'W');
-	  WindowChanged((struct win *)0, 0);
 	}
       break;
     case RC_SILENCE:
@@ -4105,7 +4079,7 @@ int key;
       else
 	{
 	  if (!windows)
-	    wtab = realloc(wtab, n * sizeof(struct win));
+	    wtab = realloc(wtab, n * sizeof(struct win *));
 	  maxwin = n;
 	}
       break;
@@ -4236,7 +4210,7 @@ int key;
 	  if (args[0][0])
 	    {
 	      fore->w_group = WindowByName(*args);
-	      if (fore->w_group && fore->w_group->w_type != W_TYPE_GROUP)
+	      if (fore->w_group == fore || (fore->w_group && fore->w_group->w_type != W_TYPE_GROUP))
 		fore->w_group = 0;
 	    }
 	  WindowChanged((struct win *)0, 'w');
@@ -4694,7 +4668,12 @@ int bufl, *argl;
 		  else if (!strcmp(ps, "PID"))
 		    sprintf(xbuf, "%d", getpid());
 		  else if (!strcmp(ps, "STY"))
-		    v = SockName;
+		    {
+		      if ((v = strchr(SockName, '.')))	/* Skip the PID */
+			v++;
+		      else
+			v = SockName;
+		    }
 		  else
 		    v = getenv(ps);
 		}
@@ -5978,7 +5957,7 @@ char *fn, **av;
       if (*buf != '\0')
 	nwin.aka = buf;
       num = atoi(*av);
-      if (num < 0 || num > maxwin - 1)
+      if (num < 0 || (maxwin && num > maxwin - 1) || (!maxwin && num > MAXWIN - 1))
 	{
 	  Msg(0, "%s: illegal screen number %d.", fn, num);
 	  num = 0;
