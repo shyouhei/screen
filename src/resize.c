@@ -67,7 +67,7 @@ static struct mline mline_zero = {
  (unsigned int  *)0,
  (unsigned char *)0
 #ifdef FONT
- ,(unsigned char *)0
+ ,(unsigned int *)0
 #endif
 #ifdef COLOR
  ,(unsigned char *)0
@@ -544,7 +544,7 @@ int wi;
 # endif
 #endif
 
-#define RESET_AFC(x, bl) do { if (x == old##bl) x = bl; } while (0)
+#define RESET_AFC(x, bl) do { if (x == (void *)old##bl) x = (void *)bl; } while (0)
 
 #define RESET_LINES(lines, count) \
   do { \
