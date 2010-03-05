@@ -540,7 +540,7 @@ int dump;
 	int l = EncodeChar(str, pi[j], fore->w_encoding, 0), ll;	\
 	for (ll = 0; ll < l; ll++)	\
 	  putc(str[ll], f);	\
-	if (dw_left((line), j, fore->w_encoding))	\
+	if (j < k && dw_left((line), j, fore->w_encoding))	\
 	  j++;	\
       }	\
     putc('\n', f);	\
