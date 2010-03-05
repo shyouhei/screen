@@ -116,7 +116,7 @@ linestart(y)
 int y;
 {
   register int x;
-  register unsigned char *i;
+  register unsigned int *i;
 
   for (x = markdata->left_mar, i = WIN(y)->image + x; x < fore->w_width - 1; x++)
     if (*i++ != ' ')
@@ -131,7 +131,7 @@ lineend(y)
 int y;
 {
   register int x;
-  register unsigned char *i;
+  register unsigned int *i;
 
   for (x = markdata->right_mar, i = WIN(y)->image + x; x >= 0; x--)
     if (*i-- != ' ')
@@ -153,15 +153,15 @@ nextchar(int *xp, int *yp, int direction, char target, int num)
   int x;      /* x coordinate of the current cursor position. */
   int step;   /* amount to increment x (+1 or -1) */
   int adjust; /* Final adjustment of cursor position. */
-  char *displayed_line; /* Line in which search takes place. */
- 
+  int *displayed_line; /* Line in which search takes place. */
+
   debug("nextchar\n");
- 
+
   x = *xp;
   adjust = 0;
   width = fore->w_width;
-  displayed_line = (char *)WIN(*yp) -> image;
- 
+  displayed_line = WIN(*yp) -> image;
+
   switch(direction) {
     case 't':
       adjust = -1; /* fall through */
@@ -176,13 +176,13 @@ nextchar(int *xp, int *yp, int direction, char target, int num)
     default:
       ASSERT(0);
   }
- 
+
   x += step;
- 
+
   debug1("ml->image = %s\n", displayed_line);
   debug2("num = %d, width = %d\n",num, width);
   debug2("x = %d target = %c\n", x, target );
- 
+
   for ( ;x>=0 && x <= width; x += step) {
     if (displayed_line[x] == target) {
       if (--num == 0) {
@@ -279,11 +279,11 @@ char *pt;
 {
   int i, j, from, to, ry, c;
   int l = 0;
-  unsigned char *im;
+  unsigned int *im;
   struct mline *ml;
 #ifdef FONT
   int cf, font;
-  unsigned char *fo;
+  unsigned int *fo;
 #endif
 
   markdata->second = 0;
@@ -335,9 +335,9 @@ char *pt;
 #endif
       for (; j <= to; j++)
 	{
-	  c = (unsigned char)*im++;
+	  c = (unsigned int)*im++;
 #ifdef FONT
-	  cf = (unsigned char)*fo++;
+	  cf = (unsigned int)*fo++;
 # ifdef UTF8
 	  if (fore->w_encoding == UTF8)
 	    {
@@ -354,7 +354,7 @@ char *pt;
 # ifdef DW_CHARS
 	  if (is_dw_font(cf))
 	    {
-	      c = c << 8 | (unsigned char)*im++;
+	      c = c << 8 | (unsigned int)*im++;
 	      fo++;
 	      j++;
 	    }
@@ -443,7 +443,7 @@ int
 GetHistory()	/* return value 1 if copybuffer changed */
 {
   int i = 0, q = 0, xx, yy, x, y;
-  unsigned char *linep;
+  unsigned int *linep;
   struct mline *ml;
 
   ASSERT(display && fore);
@@ -474,13 +474,13 @@ GetHistory()	/* return value 1 if copybuffer changed */
     return 0;
   if (D_user->u_plop.buf)
     UserFreeCopyBuffer(D_user);
-  if ((D_user->u_plop.buf = (char *)malloc((unsigned) (i - x + 2))) == NULL)
+  if ((D_user->u_plop.buf = (char *)malloc((unsigned) (i - x + 2) * sizeof (int))) == NULL)
     {
       LMsg(0, "Not enough memory... Sorry.");
       return 0;
     }
-  bcopy((char *)linep - i + x + 1, D_user->u_plop.buf, i - x + 1);
-  D_user->u_plop.len = i - x + 1;
+  bcopy((char *)(linep - i + x + 1), D_user->u_plop.buf, (i - x + 1) * sizeof(int));
+  D_user->u_plop.len = (i - x + 1) * sizeof(int);
 #ifdef ENCODINGS
   D_user->u_plop.enc = fore->w_encoding;
 #endif
@@ -1112,7 +1112,7 @@ int tx, ty, line;
   int x, y, t, revst, reven, qq, ff, tt, st, en, ce = 0;
   int ystart = 0, yend = fore->w_height-1;
   int i, ry;
-  unsigned char *wi;
+  unsigned int *wi;
   struct mline *ml;
   struct mchar mc;
 
@@ -1295,7 +1295,7 @@ int isblank;
 {
   int wy, x, i, rm;
   int sta, sto, cp;	/* NOTE: these 3 are in WINDOW coords system */
-  unsigned char *wi;
+  unsigned int *wi;
   struct mline *ml;
   struct mchar mchar_marked;
 
@@ -1384,7 +1384,7 @@ int ry, xs, xe, doit;
 struct mchar *rend;
 {
   int dx, x, y, st, en, t, rm;
-  unsigned char *i;
+  unsigned int *i;
   struct mline *ml;
   struct mchar mchar_marked;
 

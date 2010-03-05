@@ -137,7 +137,8 @@ matchword(pattern, y, sx, ex)
 char *pattern;
 int y, sx, ex;
 {
-  unsigned char *ip, *ipe, *cp, *pp;
+  unsigned int *ip, *ipe, *cp;
+  unsigned char *pp;
   struct mline *ml;
 
   /* *sigh* to make WIN work */
@@ -189,7 +190,8 @@ int l, p, end, dir;
 {
   int tab[256];
   int i, q;
-  unsigned char *s, c;
+  unsigned char *s;
+  unsigned int c;
   int w = flayer->l_width;
 
   /* *sigh* to make WIN work */

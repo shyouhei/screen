@@ -408,6 +408,7 @@ int dump;
    */
   register int i, j, k;
   register char *p;
+  register int *pi;
   register FILE *f;
   char fnbuf[1024];
   char *mode = "w";
@@ -531,22 +532,22 @@ int dump;
 #ifdef COPY_PASTE
 		  for (i = 0; i < fore->w_histheight; i++)
 		    {
-		      p = (char *)(WIN(i)->image);
-		      for (k = fore->w_width - 1; k >= 0 && p[k] == ' '; k--)
+		      pi = (WIN(i)->image);
+		      for (k = fore->w_width - 1; k >= 0 && pi[k] == ' '; k--)
 			;
 		      for (j = 0; j <= k; j++)
-			putc(p[j], f);
+			putc(pi[j], f);
 		      putc('\n', f);
 		    }
 #endif
 		}
 	      for (i = 0; i < fore->w_height; i++)
 		{
-		  p = (char *)fore->w_mlines[i].image;
-		  for (k = fore->w_width - 1; k >= 0 && p[k] == ' '; k--)
+		  pi = fore->w_mlines[i].image;
+		  for (k = fore->w_width - 1; k >= 0 && pi[k] == ' '; k--)
 		    ;
 		  for (j = 0; j <= k; j++)
-		    putc(p[j], f);
+		    putc(pi[j], f);
 		  putc('\n', f);
 		}
 	      break;
