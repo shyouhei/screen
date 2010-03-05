@@ -344,7 +344,7 @@ char *pt;
 	      c |= cf << 8;
 	      if (c == UCS_HIDDEN)
 		continue;
-	      c = ToUtf8_comb(pt, c);
+	      c = ToUtf8(pt, c);
 	      l += c;
 	      if (pt)
 	        pt += c;

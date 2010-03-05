@@ -668,51 +668,72 @@ static Tab	tab[] =
   0,							/* end of table */
 };
 
+#define FOR_EACH_BYTE_IN_UTF8(c, bytefn, combfn) do	\
+  {	\
+    int byte = 0;	\
+    if (c >= 0xe000)	\
+      {	\
+	int _tm = 0;	\
+	Tab *_t;	\
+	for (_t = tab; _t->cmask; _t++)	\
+	  {	\
+	    if (c <= _t->lmask)	\
+	      {	\
+		_tm = _t->shift;	\
+		byte = _t->cval | (c>>_tm);	\
+		bytefn	\
+		while (_tm > 0)	\
+		  {	\
+		    _tm -= 6;	\
+		    byte = 0x80 | ((c>>_tm) & 0x3F);	\
+		    bytefn	\
+		  }	\
+		break;	\
+	      }	\
+	  }	\
+	break;	\
+      }	\
+	\
+    if (c >= 0xd800 && c < 0xe000 && combchars && combchars[c - 0xd800])	\
+      {	\
+	combfn	\
+      }	\
+    if (c >= 0x800)	\
+      {	\
+	byte = (c & 0xf000) >> 12 | 0xe0;	\
+	bytefn	\
+	c = (c & 0x0fff) | 0x1000;	\
+      }	\
+    if (c >= 0x80)	\
+      {	\
+	byte = (c & 0x1fc0) >> 6 ^ 0xc0;	\
+	bytefn	\
+	c = (c & 0x3f) | 0x80;	\
+      }	\
+    byte = c;	\
+    bytefn	\
+  } while (0)
 
 void
 AddUtf8(c)
 int c;
 {
   ASSERT(D_encoding == UTF8);
-  if (c >= 0xe000)
-    {
-      int l = 0;
-      Tab *t;
-      for (t = tab; t->cmask; t++)
-	{
-	  if (c <= t->lmask)
-	    {
-	      l = t->shift;
-	      AddChar(t->cval | (c>>l));
-	      while (l > 0)
-		{
-		  l -= 6;
-		  AddChar(0x80 | ((c>>l) & 0x3F));
-		}
-	      break;
-	    }
-	}
-      return;
-    }
 
-  if (c >= 0xd800 && c < 0xe000 && combchars && combchars[c - 0xd800])
+  FOR_EACH_BYTE_IN_UTF8(c,
+    {
+      AddChar(byte);
+    },
     {
       AddUtf8(combchars[c - 0xd800]->c1);
       c = combchars[c - 0xd800]->c2;
     }
-  if (c >= 0x800)
-    {
-      AddChar((c & 0xf000) >> 12 | 0xe0);
-      c = (c & 0x0fff) | 0x1000;
-    }
-  if (c >= 0x80)
-    {
-      AddChar((c & 0x1fc0) >> 6 ^ 0xc0);
-      c = (c & 0x3f) | 0x80;
-    }
-  AddChar(c);
+  );
 }
 
+#if 0
+/* It feels like a good idea to simply use one ToUtf8, instead of having both
+ * ToUtf8_comb and ToUtf8. */
 int
 ToUtf8_comb(p, c)
 char *p;
@@ -727,29 +748,27 @@ int c;
     }
   return ToUtf8(p, c);
 }
+#endif
 
 int
 ToUtf8(p, c)
 char *p;
 int c;
 {
-  int l = 1;
-  if (c >= 0x800)
+  int l = 0;
+  FOR_EACH_BYTE_IN_UTF8(c,
     {
       if (p)
-	*p++ = (c & 0xf000) >> 12 | 0xe0; 
+	*p++ = byte;
       l++;
-      c = (c & 0x0fff) | 0x1000; 
-    }
-  if (c >= 0x80)
+    },
     {
+      l += ToUtf8(p, combchars[c - 0xd800]->c1);
+      c = combchars[c - 0xd800]->c2;
       if (p)
-	*p++ = (c & 0x1fc0) >> 6 ^ 0xc0; 
-      l++;
-      c = (c & 0x3f) | 0x80; 
+	p += l;
     }
-  if (p)
-    *p++ = c;
+  );
   return l;
 }
 
@@ -1399,6 +1418,9 @@ int *fontp;
 #ifdef UTF8
   if (encoding == UTF8)
     {
+#if 0
+      /* We didn't use to handle 16+bit unicode correctly. But since now we do (in ToUtf8),
+       * do we need this? */
       if (f)
 	{
 # ifdef DW_CHARS
@@ -1415,6 +1437,7 @@ int *fontp;
 	      c = recode_char_to_encoding(c, encoding);
 	    }
         }
+#endif
       return ToUtf8(bp, c);
     }
   if ((c & 0xff00) && f == 0)	/* is_utf8? */
