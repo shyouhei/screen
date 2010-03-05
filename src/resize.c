@@ -452,7 +452,7 @@ int xf, xt, l, w;
 {
   int r = 0;
 
-  bcopy((char *)mlf->image + xf, (char *)mlt->image + xt, l * sizeof(int));
+  bcopy((char *)(mlf->image + xf), (char *)(mlt->image + xt), l * sizeof(int));
   if (mlf->attr != null && mlt->attr == null)
     {
       if ((mlt->attr = (unsigned char *)calloc(w, 1)) == 0)
@@ -467,7 +467,7 @@ int xf, xt, l, w;
 	mlt->font = (unsigned int *)null, r = -1;
     }
   if (mlt->font != (unsigned int *)null)
-    bcopy((char *)mlf->font + xf, (char *)mlt->font + xt, l * sizeof(int));
+    bcopy((char *)(mlf->font + xf), (char *)(mlt->font + xt), l * sizeof(int));
 #endif
 #ifdef COLOR
   if (mlf->color != null && mlt->color == null)

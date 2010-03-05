@@ -381,14 +381,7 @@ register int len;
 	    {
 	      c = FromUtf8(c, &curr->w_decodestate);
 	      if (c == -1)
-		{
-#if 0
-		  FILE *f = fopen("/tmp/debug/utf-8", "a");
-		  fprintf(f, " %d ", ch);
-		  fclose(f);
-#endif
-		  continue;
-		}
+		continue;
 	      if (c == -2)
 		{
 		  c = UCS_REPL;
@@ -398,14 +391,6 @@ register int len;
 		}
 	      if (c > 0xff)
 		debug1("read UNICODE %04x\n", c);
-#if 0
-	      if (c & 0xffff0000)
-		{
-		  FILE *f = fopen("/tmp/debug/utf-8", "a");
-		  fprintf(f, " %d ", ch);
-		  fclose(f);
-		}
-#endif
 	    }
 #endif
 
@@ -2526,7 +2511,7 @@ int n, ys, ye, bce;
 	  ml->colorx = null;
 # endif
 #endif
-	  bclear((char *)ml->image, p->w_width + 1);
+	  bclear((char *)ml->image, (p->w_width + 1) * sizeof(int));
 #ifdef COLOR
 	  if (bce)
 	    MBceLine(p, i, 0, p->w_width, bce);
@@ -2571,7 +2556,7 @@ int n, ys, ye, bce;
 	  ml->colorx = null;
 # endif
 #endif
-	  bclear((char *)ml->image, p->w_width + 1);
+	  bclear((char *)ml->image, (p->w_width + 1) * sizeof(int));
 #ifdef COLOR
 	  if (bce)
 	    MBceLine(p, i, 0, p->w_width, bce);
@@ -2763,7 +2748,9 @@ int x, y;
   ml = &p->w_mlines[y];
   MKillDwRight(p, ml, x);
   MKillDwLeft(p, ml, x + n - 1);
-  bcopy(s, (char *)ml->image + x, n);
+  ip = ml->image + x;
+  for (i = 0; i <= n; i++)
+    *ip++ = *s++;
   b = ml->attr + x;
   for (i = n; i-- > 0;)
     *b++ = r->attr;
@@ -2866,7 +2853,7 @@ int ys, ye;
   debug2("MFindUsedLine: %d %d\n", ye, ys);
   for (y = ye; y >= ys; y--, ml--)
     {
-      if (bcmp((char*)ml->image, blank, p->w_width))
+      if (bcmp((char*)ml->image, blank, p->w_width * sizeof(int)))
 	break;
       if (ml->attr != null && bcmp((char*)ml->attr, null, p->w_width))
 	break;

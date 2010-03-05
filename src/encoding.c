@@ -557,13 +557,13 @@ int from, to;
       for (i = 0; i < 2; i++)
 	{
 	  if (rml[i].image == 0)
-	    rml[i].image = malloc(w);
+	    rml[i].image = malloc(w * sizeof(int));
 	  else
-	    rml[i].image = realloc(rml[i].image, w);
+	    rml[i].image = realloc(rml[i].image, w * sizeof(int));
 	  if (rml[i].font == 0)
-	    rml[i].font = malloc(w);
+	    rml[i].font = malloc(w * sizeof(int));
 	  else
-	    rml[i].font = realloc(rml[i].font, w);
+	    rml[i].font = realloc(rml[i].font, w * sizeof(int));
 	  if (rml[i].image == 0 || rml[i].font == 0)
 	    {
 	      maxlen = 0;
@@ -703,12 +703,12 @@ int c;
   if (c >= 0x800)
     {
       AddChar((c & 0xf000) >> 12 | 0xe0);
-      c = (c & 0x0fff) | 0x1000; 
+      c = (c & 0x0fff) | 0x1000;
     }
   if (c >= 0x80)
     {
       AddChar((c & 0x1fc0) >> 6 ^ 0xc0);
-      c = (c & 0x3f) | 0x80; 
+      c = (c & 0x3f) | 0x80;
     }
   AddChar(c);
 }
@@ -809,16 +809,6 @@ int c, *utf8charp;
   *utf8charp = utf8char = (c & 0x80000000) ? c : 0;
   if (utf8char)
     return -1;
-#if 0
-  if (c & 0xffff0000)
-    {
-      FILE *f = fopen("/tmp/debug/utf-8", "a");
-      fprintf(f, " %x ", c);
-      fclose(f);
-    }
-  if (c & 0xffff0000)
-    c = UCS_REPL;	/* sorry, only know 16bit Unicode */
-#endif
   if (c >= 0xd800 && (c <= 0xdfff || c == 0xfffe || c == 0xffff))
     c = UCS_REPL;	/* illegal code */
   return c;
