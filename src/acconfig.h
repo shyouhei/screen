@@ -129,7 +129,7 @@
  * define COLOR to include ansi color support. This may expose
  *        a bug in x11r6-color-xterm.
  * define DW_CHARS to include support for double-width character
- *        sets.
+ *        (i.e. multi-byte) sets.
  * define ENCODINGS to include support for encodings like euc or big5.
  *        Needs FONT to work.
  * define UTF8 if you want support for UTF-8 encoding.

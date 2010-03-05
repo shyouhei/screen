@@ -1,4 +1,12 @@
-/* Copyright (c) 1993-2003
+/* Copyright (c) 2010
+ *      Juergen Weigert (jnweiger@immd4.informatik.uni-erlangen.de)
+ *      Sadrul Habib Chowdhury (sadrul@users.sourceforge.net)
+ * Copyright (c) 2008, 2009
+ *      Juergen Weigert (jnweiger@immd4.informatik.uni-erlangen.de)
+ *      Michael Schroeder (mlschroe@immd4.informatik.uni-erlangen.de)
+ *      Micah Cowan (micah@cowan.name)
+ *      Sadrul Habib Chowdhury (sadrul@users.sourceforge.net)
+ * Copyright (c) 1993-2003
  *      Juergen Weigert (jnweiger@immd4.informatik.uni-erlangen.de)
  *      Michael Schroeder (mlschroe@immd4.informatik.uni-erlangen.de)
  * Copyright (c) 1987 Oliver Laumann 
@@ -542,7 +550,7 @@ int from, to;
 
   if (from == to || (from != UTF8 && to != UTF8) || w == 0)
     return ml;
-  if (ml->font == null && encodings[from].deffont == 0)
+  if (ml->font == (unsigned int *)null && encodings[from].deffont == 0)
     return ml;
   if (w > maxlen)
     {
@@ -639,11 +647,54 @@ struct combchar {
 };
 struct combchar **combchars;
 
+/** Thank you Ken! http://www.cl.cam.ac.uk/~mgk25/ucs/utf-8-history.txt */
+typedef struct
+{
+  int	cmask;
+  int	cval;
+  int	shift;
+  long	lmask;
+  long	lval;
+} Tab;
+
+static Tab	tab[] =
+{
+  0x80,	0x00,	0*6,	0x7F,		0,		/* 1 byte sequence */
+  0xE0,	0xC0,	1*6,	0x7FF,		0x80,		/* 2 byte sequence */
+  0xF0,	0xE0,	2*6,	0xFFFF,		0x800,		/* 3 byte sequence */
+  0xF8,	0xF0,	3*6,	0x1FFFFF,	0x10000,	/* 4 byte sequence */
+  0xFC,	0xF8,	4*6,	0x3FFFFFF,	0x200000,	/* 5 byte sequence */
+  0xFE,	0xFC,	5*6,	0x7FFFFFFF,	0x4000000,	/* 6 byte sequence */
+  0,							/* end of table */
+};
+
+
 void
 AddUtf8(c)
 int c;
 {
   ASSERT(D_encoding == UTF8);
+  if (c >= 0xe000)
+    {
+      int l = 0;
+      Tab *t;
+      for (t = tab; t->cmask; t++)
+	{
+	  if (c <= t->lmask)
+	    {
+	      l = t->shift;
+	      AddChar(t->cval | (c>>l));
+	      while (l > 0)
+		{
+		  l -= 6;
+		  AddChar(0x80 | ((c>>l) & 0x3F));
+		}
+	      break;
+	    }
+	}
+      return;
+    }
+
   if (c >= 0xd800 && c < 0xe000 && combchars && combchars[c - 0xd800])
     {
       AddUtf8(combchars[c - 0xd800]->c1);
@@ -758,8 +809,16 @@ int c, *utf8charp;
   *utf8charp = utf8char = (c & 0x80000000) ? c : 0;
   if (utf8char)
     return -1;
+#if 0
+  if (c & 0xffff0000)
+    {
+      FILE *f = fopen("/tmp/debug/utf-8", "a");
+      fprintf(f, " %x ", c);
+      fclose(f);
+    }
   if (c & 0xffff0000)
     c = UCS_REPL;	/* sorry, only know 16bit Unicode */
+#endif
   if (c >= 0xd800 && (c <= 0xdfff || c == 0xfffe || c == 0xffff))
     c = UCS_REPL;	/* illegal code */
   return c;
@@ -803,7 +862,7 @@ int encoding;
 #else
       ml = &p->w_mlines[j];
 #endif
-      if (ml->font == null && encodings[p->w_encoding].deffont == 0)
+      if (ml->font == (unsigned int *)null && encodings[p->w_encoding].deffont == 0)
 	continue;
       for (i = 0; i < p->w_width; i++)
 	{
@@ -812,11 +871,11 @@ int encoding;
 	    c |= encodings[p->w_encoding].deffont << 8;
 	  if (c < 256)
 	    continue;
-	  if (ml->font == null)
+	  if (ml->font == (unsigned int *)null)
 	    {
-	      if ((ml->font = (unsigned char *)calloc(p->w_width + 1, 1)) == 0)
+	      if ((ml->font = (unsigned int *)calloc(p->w_width + 1, sizeof(int))) == 0)
 		{
-		  ml->font = null;
+		  ml->font = (unsigned int *)null;
 		  break;
 		}
 	    }
@@ -1612,7 +1671,8 @@ struct mline *ml;
 int xs, xe;
 int encoding;
 {
-  unsigned char *f, *i;
+  unsigned int *f;
+  unsigned int *i;
   int c, x, dx;
 
   if (encoding == UTF8 || encodings[encoding].deffont == 0)

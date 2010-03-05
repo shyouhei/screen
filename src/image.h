@@ -56,18 +56,18 @@
 #endif
 
 struct mchar {
-	 unsigned char image;
+	 unsigned int  image;
 	 unsigned char attr;
-IFFONT(  unsigned char font; )
+IFFONT(  unsigned int  font; )
 IFCOLOR( unsigned char color; )
 IFCOLORX(unsigned char colorx; )
-IFDWCHAR(unsigned char mbcs; )
+IFDWCHAR(unsigned int  mbcs; )
 };
 
 struct mline {
-	 unsigned char *image;
+	 unsigned int  *image;
 	 unsigned char *attr;
-IFFONT(  unsigned char *font; )
+IFFONT(  unsigned int  *font; )
 IFCOLOR( unsigned char *color; )
 IFCOLORX(unsigned char *colorx; )
 };
@@ -75,25 +75,25 @@ IFCOLORX(unsigned char *colorx; )
 
 
 #define save_mline(ml, n) do {						\
-	 bcopy((char *)(ml)->image, (char *)mline_old.image, (n));	\
+	 bcopy((char *)(ml)->image, (char *)mline_old.image, (n) * sizeof(int));	\
 	 bcopy((char *)(ml)->attr,  (char *)mline_old.attr,  (n));	\
-IFFONT(	 bcopy((char *)(ml)->font,  (char *)mline_old.font,  (n));    ) \
+IFFONT(	 bcopy((char *)(ml)->font,  (char *)mline_old.font,  (n) * sizeof(int));    ) \
 IFCOLOR( bcopy((char *)(ml)->color, (char *)mline_old.color, (n));    ) \
 IFCOLORX(bcopy((char *)(ml)->colorx, (char *)mline_old.colorx, (n));  ) \
 } while (0)
 
 #define bcopy_mline(ml, xf, xt, n) do {					       \
-	 bcopy((char *)(ml)->image + (xf), (char *)(ml)->image + (xt), (n));   \
+	 bcopy((char *)((ml)->image + (xf)), (char *)((ml)->image + (xt)), (n) * sizeof(int));   \
 	 bcopy((char *)(ml)->attr  + (xf), (char *)(ml)->attr  + (xt), (n));   \
-IFFONT(	 bcopy((char *)(ml)->font  + (xf), (char *)(ml)->font  + (xt), (n)); ) \
+IFFONT(	 bcopy((char *)((ml)->font  + (xf)), (char *)((ml)->font  + (xt)), (n) * sizeof(int)); ) \
 IFCOLOR( bcopy((char *)(ml)->color + (xf), (char *)(ml)->color + (xt), (n)); ) \
 IFCOLORX(bcopy((char *)(ml)->colorx + (xf), (char *)(ml)->colorx + (xt), (n));) \
 } while (0)
 
 #define clear_mline(ml, x, n) do {					       \
-	 bclear((char *)(ml)->image + (x), (n));			       \
+	 bclear((char *)((ml)->image + (x)), (n) * sizeof(int));			       \
 	 if ((ml)->attr != null) bzero((char *)(ml)->attr  + (x), (n));	       \
-IFFONT(  if ((ml)->font != null) bzero((char *)(ml)->font  + (x), (n));      ) \
+IFFONT(  if ((unsigned char*)(ml)->font != null) bzero((char *)((ml)->font  + (x)), (n) * sizeof(int));      ) \
 IFCOLOR( if ((ml)->color!= null) bzero((char *)(ml)->color + (x), (n));      ) \
 IFCOLORX(if ((ml)->colorx!= null) bzero((char *)(ml)->colorx + (x), (n));    ) \
 } while (0)

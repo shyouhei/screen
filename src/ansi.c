@@ -381,7 +381,14 @@ register int len;
 	    {
 	      c = FromUtf8(c, &curr->w_decodestate);
 	      if (c == -1)
-		continue;
+		{
+#if 0
+		  FILE *f = fopen("/tmp/debug/utf-8", "a");
+		  fprintf(f, " %d ", ch);
+		  fclose(f);
+#endif
+		  continue;
+		}
 	      if (c == -2)
 		{
 		  c = UCS_REPL;
@@ -391,6 +398,14 @@ register int len;
 		}
 	      if (c > 0xff)
 		debug1("read UNICODE %04x\n", c);
+#if 0
+	      if (c & 0xffff0000)
+		{
+		  FILE *f = fopen("/tmp/debug/utf-8", "a");
+		  fprintf(f, " %d ", ch);
+		  fclose(f);
+		}
+#endif
 	    }
 #endif
 
@@ -2183,7 +2198,7 @@ static void
 FillWithEs()
 {
   register int i;
-  register unsigned char *p, *ep;
+  register unsigned int *p, *ep;
 
   LClearAll(&curr->w_layer, 1);
   curr->w_y = curr->w_x = 0;
@@ -2237,7 +2252,7 @@ int l;
 static void
 FindAKA()
 {
-  register unsigned char *cp, *line;
+  register unsigned int *cp, *line;
   register struct win *wp = curr;
   register int len = strlen(wp->w_akabuf);
   int y;
@@ -2256,7 +2271,7 @@ FindAKA()
 		goto try_line;
 	      return;
 	    }
-	  if (strncmp((char *)cp, wp->w_akabuf, len) == 0)
+	  if (strncmp((char *)cp, wp->w_akabuf, len) == 0)	/* FIXME: */
 	    break;
 	  cp++;
 	}
@@ -2277,7 +2292,7 @@ FindAKA()
 	    line = cp;
 	  len--;
 	}
-      ChangeAKA(wp, (char *)line, cp - line);
+      ChangeAKA(wp, (char *)line, cp - line);	/* FIXME */
     }
   else
     wp->w_autoaka = 0;
@@ -2352,11 +2367,11 @@ struct mchar *mc;
 	}
     }
 #ifdef FONT
-  if (mc->font && ml->font == null)
+  if (mc->font && (unsigned char *)ml->font == null)
     {
-      if ((ml->font = (unsigned char *)calloc(p->w_width + 1, 1)) == 0)
+      if ((ml->font = (unsigned int *)calloc(p->w_width + 1, sizeof(int))) == 0)
 	{
-	  ml->font = null;
+	  ml->font = (unsigned int *)null;
 	  p->w_FontL = p->w_charsets[p->w_ss ? p->w_ss : p->w_Charset] = 0;
 	  p->w_FontR = p->w_charsets[p->w_ss ? p->w_ss : p->w_CharsetR] = 0;
 	  mc->font = p->w_rend.font  = 0;
@@ -2497,9 +2512,9 @@ int n, ys, ye, bce;
 	    free(ml->attr);
 	  ml->attr = null;
 #ifdef FONT
-	  if (ml->font != null)
+	  if (ml->font != (unsigned int *)null)
 	    free(ml->font);
-	  ml->font = null;
+	  ml->font = (unsigned int *)null;
 #endif
 #ifdef COLOR
 	  if (ml->color != null)
@@ -2542,9 +2557,9 @@ int n, ys, ye, bce;
 	    free(ml->attr);
 	  ml->attr = null;
 #ifdef FONT
-	  if (ml->font != null)
+	  if (ml->font != (unsigned int *)null)
 	    free(ml->font);
-	  ml->font = null;
+	  ml->font = (unsigned int *)null;
 #endif
 #ifdef COLOR
 	  if (ml->color != null)
@@ -2740,6 +2755,7 @@ int x, y;
   struct mline *ml;
   int i;
   unsigned char *b;
+  unsigned int  *ip;
 
   if (n <= 0)
     return;
@@ -2752,9 +2768,9 @@ int x, y;
   for (i = n; i-- > 0;)
     *b++ = r->attr;
 #ifdef FONT
-  b = ml->font + x;
+  ip = ml->font + x;
   for (i = n; i-- > 0;)
-    *b++ = r->font;
+    *ip++ = r->font;
 #endif
 #ifdef COLOR
   b = ml->color + x;
@@ -2805,7 +2821,7 @@ WAddLineToHist(wp, ml)
 struct win *wp;
 struct mline *ml;
 {
-  register unsigned char *q, *o;
+  register void *q, *o;
   struct mline *hml;
 
   if (wp->w_histheight == 0)
@@ -2816,9 +2832,9 @@ struct mline *ml;
   q = ml->attr; o = hml->attr; hml->attr = q; ml->attr = null;
   if (o != null)
     free(o);
- 
+
 #ifdef FONT
-  q = ml->font; o = hml->font; hml->font = q; ml->font = null;
+  q = ml->font; o = hml->font; hml->font = q; ml->font = (unsigned int *)null;
   if (o != null)
     free(o);
 #endif

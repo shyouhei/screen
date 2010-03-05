@@ -45,14 +45,15 @@
 static void CheckMaxSize __P((int));
 static void FreeMline  __P((struct mline *));
 static int  AllocMline __P((struct mline *ml, int));
-static void MakeBlankLine __P((unsigned char *, int));
+static void MakeBlankLine __P((unsigned int  *, int));
 static void kaablamm __P((void));
 static int  BcopyMline __P((struct mline *, int, struct mline *, int, int, int));
 static void SwapAltScreen __P((struct win *));
 
 extern struct layer *flayer;
 extern struct display *display, *displays;
-extern unsigned char *blank, *null;
+extern unsigned char *null;
+extern unsigned int  *blank;
 extern struct mline mline_blank, mline_null, mline_old;
 extern struct win *windows;
 extern int Z0width, Z1width;
@@ -63,7 +64,7 @@ struct winsize glwz;
 #endif
 
 static struct mline mline_zero = {
- (unsigned char *)0,
+ (unsigned int  *)0,
  (unsigned char *)0
 #ifdef FONT
  ,(unsigned char *)0
@@ -408,7 +409,7 @@ struct mline *ml;
   if (ml->attr && ml->attr != null)
     free(ml->attr);
 #ifdef FONT
-  if (ml->font && ml->font != null)
+  if (ml->font && ml->font != (unsigned int *)null)
     free(ml->font);
 #endif
 #ifdef COLOR
@@ -427,10 +428,10 @@ AllocMline(ml, w)
 struct mline *ml;
 int w;
 {
-  ml->image = malloc(w);
+  ml->image = malloc(w * sizeof(int));
   ml->attr  = null;
 #ifdef FONT
-  ml->font  = null;
+  ml->font  = (unsigned int *)null;
 #endif
 #ifdef COLOR
   ml->color = null;
@@ -451,7 +452,7 @@ int xf, xt, l, w;
 {
   int r = 0;
 
-  bcopy((char *)mlf->image + xf, (char *)mlt->image + xt, l);
+  bcopy((char *)mlf->image + xf, (char *)mlt->image + xt, l * sizeof(int));
   if (mlf->attr != null && mlt->attr == null)
     {
       if ((mlt->attr = (unsigned char *)calloc(w, 1)) == 0)
@@ -460,13 +461,13 @@ int xf, xt, l, w;
   if (mlt->attr != null)
     bcopy((char *)mlf->attr + xf, (char *)mlt->attr + xt, l);
 #ifdef FONT
-  if (mlf->font != null && mlt->font == null)
+  if (mlf->font != (unsigned int *)null && mlt->font == (unsigned int *)null)
     {
-      if ((mlt->font = (unsigned char *)calloc(w, 1)) == 0)
-	mlt->font = null, r = -1;
+      if ((mlt->font = (unsigned int *)calloc(w, sizeof(int))) == 0)
+	mlt->font = (unsigned int *)null, r = -1;
     }
-  if (mlt->font != null)
-    bcopy((char *)mlf->font + xf, (char *)mlt->font + xt, l);
+  if (mlt->font != (unsigned int *)null)
+    bcopy((char *)mlf->font + xf, (char *)mlt->font + xt, l * sizeof(int));
 #endif
 #ifdef COLOR
   if (mlf->color != null && mlt->color == null)
@@ -497,7 +498,7 @@ CheckMaxSize(wi)
 int wi;
 {
   unsigned char *oldnull = null;
-  unsigned char *oldblank = blank;
+  unsigned int  *oldblank = blank;
   struct win *p;
   int i;
   struct mline *ml;
@@ -507,12 +508,12 @@ int wi;
     return;
   maxwidth = wi;
   debug1("New maxwidth: %d\n", maxwidth);
-  blank = (unsigned char *)xrealloc((char *)blank, maxwidth);
-  null = (unsigned char *)xrealloc((char *)null, maxwidth);
-  mline_old.image = (unsigned char *)xrealloc((char *)mline_old.image, maxwidth);
+  blank = (unsigned int *)xrealloc((char *)blank, maxwidth * sizeof(int));
+  null = (unsigned char *)xrealloc((char *)null, maxwidth * sizeof(int));
+  mline_old.image = (unsigned int *)xrealloc((char *)mline_old.image, maxwidth * sizeof(int));
   mline_old.attr = (unsigned char *)xrealloc((char *)mline_old.attr, maxwidth);
 #ifdef FONT
-  mline_old.font = (unsigned char *)xrealloc((char *)mline_old.font, maxwidth);
+  mline_old.font = (unsigned int  *)xrealloc((char *)mline_old.font, maxwidth * sizeof(int));
 #endif
 #ifdef COLOR
   mline_old.color = (unsigned char *)xrealloc((char *)mline_old.color, maxwidth);
@@ -524,15 +525,15 @@ int wi;
     Panic(0, strnomem);
 
   MakeBlankLine(blank, maxwidth);
-  bzero((char *)null, maxwidth);
+  bzero((char *)null, maxwidth * sizeof(int));
 
   mline_blank.image = blank;
   mline_blank.attr  = null;
-  mline_null.image = null;
+  mline_null.image = (unsigned int *)null;
   mline_null.attr  = null;
 #ifdef FONT
-  mline_blank.font  = null;
-  mline_null.font  = null;
+  mline_blank.font  = (unsigned int *)null;
+  mline_null.font  = (unsigned int *)null;
 #endif
 #ifdef COLOR
   mline_blank.color = null;
@@ -592,7 +593,7 @@ int len;
 
 static void
 MakeBlankLine(p, n)
-register unsigned char *p;
+register unsigned int *p;
 register int n;
 {
   while (n--)
@@ -807,7 +808,7 @@ int wi, he, hi;
 	    {
 	      if (AllocMline(mlt, wi + 1))
 		goto nomem;
-    	      MakeBlankLine(mlt->image + lt, wi - lt);
+	      MakeBlankLine(mlt->image + lt, wi - lt);
 	      mlt->image[wi] = ((oty == ty) ? ' ' : 0);
 	    }
 	  if (BcopyMline(mlf, lf - lx, mlt, lt - lx, lx, wi + 1))
