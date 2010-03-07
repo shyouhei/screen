@@ -76,6 +76,7 @@ Version 4.1.0 (??/??/20??):
   * Increased default maximum number of windows from 40 to 100.
   * Increased number color/attribute changes in caption/hardstatus string from 16 to 256.
   * Some commands can be remotely queried using the -Q command-line flag.
+  * Support for 32-bit unicode.
 
   In-Progress:
   * Scripting support (thanks to Google Summer of Code 2009 project by Rui Guo)
