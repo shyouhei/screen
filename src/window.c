@@ -614,7 +614,7 @@ struct NewWindow *newwin;
   if ((p = (struct win *)calloc(1, sizeof(struct win))) == 0)
     {
       close(f);
-      Msg(0, strnomem);
+      Msg(0, "%s", strnomem);
       return -1;
     }
 
@@ -650,7 +650,7 @@ struct NewWindow *newwin;
     {
       free((char *)p);
       close(f);
-      Msg(0, strnomem);
+      Msg(0, "%s", strnomem);
       return -1;
     }
 #endif
@@ -1531,7 +1531,7 @@ char **av;
     }
   if (!(pwin = (struct pseudowin *)calloc(1, sizeof(struct pseudowin))))
     {
-      Msg(0, strnomem);
+      Msg(0, "%s", strnomem);
       return -1;
     }
 
