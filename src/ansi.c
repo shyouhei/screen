@@ -1,4 +1,7 @@
-/* Copyright (c) 2008, 2009
+/* Copyright (c) 2010
+ *      Juergen Weigert (jnweiger@immd4.informatik.uni-erlangen.de)
+ *      Sadrul Habib Chowdhury (sadrul@users.sourceforge.net)
+ * Copyright (c) 2008, 2009
  *      Juergen Weigert (jnweiger@immd4.informatik.uni-erlangen.de)
  *      Michael Schroeder (mlschroe@immd4.informatik.uni-erlangen.de)
  *      Micah Cowan (micah@cowan.name)
@@ -2234,12 +2237,30 @@ int l;
   WindowChanged((struct win *)0, 'W');
 }
 
+static int
+strncmpint(const char *s, const int *i, int len)
+{
+  while (len--)
+    {
+      if (!*s && !*i)
+	return 0;
+      if (*s < *i)
+	return -1;
+      else if (*s > *i)
+	return 1;
+      s++;
+      i++;
+    }
+  return 0;
+}
+
 static void
 FindAKA()
 {
-  register unsigned int *cp, *line;
+  register unsigned int *cp, *line, *i;
   register struct win *wp = curr;
   register int len = strlen(wp->w_akabuf);
+  char aka[MAXSTR], *paka;
   int y;
 
   y = (wp->w_autoaka > 0 && wp->w_autoaka <= wp->w_height) ? wp->w_autoaka - 1 : wp->w_y;
@@ -2256,7 +2277,7 @@ FindAKA()
 		goto try_line;
 	      return;
 	    }
-	  if (strncmp((char *)cp, wp->w_akabuf, len) == 0)	/* FIXME: */
+	  if (strncmpint(wp->w_akabuf, cp, len) == 0)
 	    break;
 	  cp++;
 	}
@@ -2277,7 +2298,12 @@ FindAKA()
 	    line = cp;
 	  len--;
 	}
-      ChangeAKA(wp, (char *)line, cp - line);	/* FIXME */
+      if (cp - line > MAXSTR)
+	cp = line + MAXSTR;
+      paka = aka;
+      for (i = line; i < cp; i++)
+	*paka++ = (unsigned char) *i;
+      ChangeAKA(wp, aka, paka - aka);
     }
   else
     wp->w_autoaka = 0;
