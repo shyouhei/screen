@@ -2327,26 +2327,7 @@ int y, from, to, isblank;
       return;	/* can't refresh status */
     }
 
-  /* The following check makes plenty of sense. Unfortunately,
-     vte-based terminals (notably gnome-terminal) experience a quirk
-     that causes the final line not to update properly when it falls outside
-     the scroll region; clearing the line with D_CE avoids the glitch,
-     so we'll disable this perfectly sensible shortcut until such a time
-     as widespread vte installations lack the glitch.
-
-     See http://bugzilla.gnome.org/show_bug.cgi?id=542087 for current
-     status of the VTE bug report, and
-     https://savannah.gnu.org/bugs/index.php?23699 for the history from
-     the Savannah BTS. */
-#if 0
-  if (y == D_height - 1 && D_has_hstatus == HSTATUS_LASTLINE)
-    {
-      RefreshHStatus();
-      return;
-    }
-#endif
-
-  if (isblank == 0 && D_CE && to == D_width - 1 && from < to)
+  if (isblank == 0 && D_CE && to == D_width - 1 && from < to && D_status != STATUS_ON_HS)
     {
       GotoPos(from, y);
       if (D_UT || D_BE)
@@ -2354,6 +2335,13 @@ int y, from, to, isblank;
       AddCStr(D_CE);
       isblank = 1;
     }
+
+  if (y == D_height - 1 && D_has_hstatus == HSTATUS_LASTLINE)
+    {
+      RefreshHStatus();
+      return;
+    }
+
   while (from <= to)
     {
       lcv = 0;
@@ -3430,7 +3418,7 @@ char *data;
 	  y = bp[4] - 33;
 	  if (x >= D_forecv->c_xs && x <= D_forecv->c_xe && y >= D_forecv->c_ys && y <= D_forecv->c_ye)
 	    {
-	      if (D_fore && (D_fore->w_mouse || (D_mousetrack && D_forecv->c_layer->l_mode == 1)))
+	      if ((D_fore && D_fore->w_mouse) || (D_mousetrack && D_forecv->c_layer->l_mode == 1))
 		{
 		  /* Send clicks only if the window is expecting clicks */
 		  x -= D_forecv->c_xoff;
