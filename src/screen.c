@@ -1,4 +1,7 @@
-/* Copyright (c) 2008
+/* Copyright (c) 2010
+ *      Juergen Weigert (jnweiger@immd4.informatik.uni-erlangen.de)
+ *      Sadrul Habib Chowdhury (sadrul@users.sourceforge.net)
+ * Copyright (c) 2008, 2009
  *      Juergen Weigert (jnweiger@immd4.informatik.uni-erlangen.de)
  *      Michael Schroeder (mlschroe@immd4.informatik.uni-erlangen.de)
  *      Micah Cowan (micah@cowan.name)
@@ -118,6 +121,8 @@ int VBellWait, MsgWait, MsgMinWait, SilenceWait;
 extern struct acluser *users;
 extern struct display *displays, *display; 
 
+extern struct LayFuncs MarkLf;
+
 
 extern int visual_bell;
 #ifdef COPY_PASTE
@@ -205,6 +210,7 @@ char *wlisttit;
 int auto_detach = 1;
 int iflag, rflag, dflag, lsflag, quietflag, wipeflag, xflag;
 int cmdflag;
+int queryflag = -1;
 int adaptflag;
 
 #ifdef MULTIUSER
@@ -235,7 +241,7 @@ int cjkwidth;
 #ifdef NETHACK
 int nethackflag = 0;
 #endif
-int maxwin = MAXWIN;
+int maxwin;
 
 
 struct layer *flayer;
@@ -463,10 +469,10 @@ char **av;
   screenlogfile = SaveStr("screenlog.%n");
   logtstamp_string = SaveStr("-- %n:%t -- time-stamp -- %M/%d/%y %c:%s --\n");
   hstatusstring = SaveStr("%h");
-  captionstring = SaveStr("%3n %t");
+  captionstring = SaveStr("%4n %t");
   timestring = SaveStr("%c:%s %M %d %H%? %l%?");
-  wlisttit = SaveStr("Num Name%=Flags");
-  wliststr = SaveStr("%3n %t%=%f");
+  wlisttit = SaveStr(" Num Name%=Flags");
+  wliststr = SaveStr("%4n %t%=%f");
 #ifdef COPY_PASTE
   BufferFile = SaveStr(DEFAULT_BUFFERFILE);
 #endif
@@ -678,6 +684,10 @@ char **av;
 		case 'q':
 		  quietflag = 1;
 		  break;
+		case 'Q':
+		  queryflag = 1;
+		  cmdflag = 1;
+		  break;
 		case 'r':
 		case 'R':
 #ifdef MULTI
@@ -757,17 +767,12 @@ char **av;
   real_gid = getgid();
   eff_uid = geteuid();
   eff_gid = getegid();
-  if (eff_uid != real_uid)
-    {		
-      /* if running with s-bit, we must install a special signal
-       * handler routine that resets the s-bit, so that we get a
-       * core file anyway.
-       */
+
 #ifdef SIGBUS /* OOPS, linux has no bus errors! */
-      signal(SIGBUS, CoreDump);
+  signal(SIGBUS, CoreDump);
 #endif /* SIGBUS */
-      signal(SIGSEGV, CoreDump);
-    }
+  signal(SIGSEGV, CoreDump);
+
 
 #ifdef USE_LOCALE
   setlocale(LC_ALL, "");
@@ -813,7 +818,7 @@ char **av;
           size_t newsz;
           char *newbuf = malloc(3 * len);
           if (!newbuf)
-            Panic(0, strnomem);
+            Panic(0, "%s", strnomem);
           newsz = RecodeBuf(nwin_options.aka, len,
                             nwin_options.encoding, 0, newbuf);
           newbuf[newsz] = '\0';
@@ -1076,7 +1081,7 @@ char **av;
       else
 	{
 	  SockDir = SOCKDIR;
-	  if (lstat(SockDir, &st))
+	  if (stat(SockDir, &st))
 	    {
 	      n = (eff_uid == 0 && (real_uid || eff_gid == real_gid)) ? 0755 :
 	          (eff_gid != real_gid) ? 0775 :
@@ -1174,7 +1179,7 @@ char **av;
       if (!*av)
 	Panic(0, "Please specify a command.");
       SET_GUID();
-      SendCmdMessage(sty, SockMatch, av);
+      SendCmdMessage(sty, SockMatch, av, queryflag >= 0);
       exit(0);
     }
   else if (rflag || xflag)
@@ -1414,8 +1419,13 @@ char **av;
       debug("We open one default window, as screenrc did not specify one.\n");
       if (MakeWindow(&nwin) == -1)
 	{
-	  Msg(0, "Sorry, could not find a PTY.");
-	  sleep(5);
+	  fd_set rfd;
+	  struct timeval tv = { MsgWait/1000, 1000*(MsgWait%1000) };
+	  FD_SET(0, &rfd);
+
+	  Msg(0, "Sorry, could not find a PTY or TTY.");
+	  // allow user to exit early by pressing any key.
+	  select(1, &rfd, NULL, NULL, &tv);
 	  Finit(0);
 	  /* NOTREACHED */
 	}
@@ -1468,6 +1478,26 @@ int wstat_valid;
 {
   int killit = 0;
 
+  if (p->w_destroyev.data == (char *)p)
+    {
+      wstat = p->w_exitstatus;
+      wstat_valid = 1;
+      evdeq(&p->w_destroyev);
+      p->w_destroyev.data = 0;
+    }
+
+#if defined(BSDJOBS) && !defined(BSDWAIT)
+  if (!wstat_valid && p->w_pid > 0)
+    {
+      /* EOF on file descriptor. The process is probably also dead.
+       * try a waitpid */
+      if (waitpid(p->w_pid, &wstat, WNOHANG | WUNTRACED) == p->w_pid)
+	{
+	  p->w_pid = 0;
+	  wstat_valid = 1;
+	}
+    }
+#endif
   if (ZombieKey_destroy && ZombieKey_onerror && wstat_valid &&
       WIFEXITED(wstat) && WEXITSTATUS(wstat) == 0)
 	killit = 1;
@@ -1604,8 +1634,20 @@ SigInt SIGDEFARG
 static sigret_t
 CoreDump SIGDEFARG
 {
+  /* if running with s-bit, we must reset the s-bit, so that we get a
+   * core file anyway.
+   */
+
   struct display *disp;
   char buf[80];
+
+  char *dump_msg = " (core dumped)";
+
+  int running_w_s_bit = getuid() != geteuid();
+#if defined(SHADOWPW) && !defined(DEBUG) && !defined(DUMPSHADOW)
+  if (running_w_s_bit)
+    dump_msg = "";
+#endif
 
 #if defined(SYSVSIGS) && defined(SIGHASARG)
   signal(sigsig, SIG_IGN);
@@ -1613,30 +1655,34 @@ CoreDump SIGDEFARG
   setgid(getgid());
   setuid(getuid());
   unlink("core");
+
 #ifdef SIGHASARG
-  sprintf(buf, "\r\n[screen caught signal %d.%s]\r\n", sigsig,
+  sprintf(buf, "\r\n[screen caught signal %d.%s]\r\n", sigsig, dump_msg);
 #else
-  sprintf(buf, "\r\n[screen caught a fatal signal.%s]\r\n",
+  sprintf(buf, "\r\n[screen caught a fatal signal.%s]\r\n", dump_msg);
 #endif
-#if defined(SHADOWPW) && !defined(DEBUG) && !defined(DUMPSHADOW)
-              ""
-#else /* SHADOWPW  && !DEBUG */
-              " (core dumped)"
-#endif /* SHADOWPW  && !DEBUG */
-              );
+
   for (disp = displays; disp; disp = disp->d_next)
     {
+      if (disp->d_nonblock < -1 || disp->d_nonblock > 1000000)
+	continue;
       fcntl(disp->d_userfd, F_SETFL, 0);
       SetTTY(disp->d_userfd, &D_OldMode);
       write(disp->d_userfd, buf, strlen(buf));
       Kill(disp->d_userpid, SIG_BYE);
     }
+
+  if (running_w_s_bit)
+    {
 #if defined(SHADOWPW) && !defined(DEBUG) && !defined(DUMPSHADOW)
-  Kill(getpid(), SIGKILL);
-  eexit(11);
+      Kill(getpid(), SIGKILL);
+      eexit(11);
 #else /* SHADOWPW && !DEBUG */
-  abort();
+      abort();
 #endif /* SHADOWPW  && !DEBUG */
+    }
+  else
+    abort();
   SIGRETURN;
 }
 
@@ -1708,7 +1754,16 @@ DoWait()
 	      else
 #endif
 		{
-		  WindowDied(p, wstat, 1);
+		  /* Screen will detect the window has died when the window's
+		   * file descriptor signals EOF (which it will do when the process in
+		   * the window terminates). So do this in a timeout of 10 seconds.
+		   * (not doing this at all might also work)
+		   * See #27061 for more details.
+		   */
+		  p->w_destroyev.data = (char *)p;
+		  p->w_exitstatus = wstat;
+		  SetTimeout(&p->w_destroyev, 10 * 1000);
+		  evenq(&p->w_destroyev);
 		}
 	      break;
 	    }
@@ -1776,7 +1831,7 @@ int i;
       RestoreLoginSlot();
 #endif
       AddStr("[screen is terminating]\r\n");
-      Flush();
+      Flush(3);
       SetTTY(D_userfd, &D_OldMode);
       fcntl(D_userfd, F_SETFL, 0);
       freetty();
@@ -1997,7 +2052,7 @@ MakeNewEnv()
     free((char *)NewEnv);
   NewEnv = np = (char **) malloc((unsigned) (op - environ + 7 + 1) * sizeof(char **));
   if (!NewEnv)
-    Panic(0, strnomem);
+    Panic(0, "%s", strnomem);
   sprintf(stybuf, "STY=%s", strlen(SockName) <= MAXSTR - 5 ? SockName : "?");
   *np++ = stybuf;	                /* NewEnv[0] */
   *np++ = Term;	                /* NewEnv[1] */
@@ -2023,11 +2078,11 @@ MakeNewEnv()
 void
 /*VARARGS2*/
 #if defined(USEVARARGS) && defined(__STDC__)
-Msg(int err, char *fmt, VA_DOTS)
+Msg(int err, const char *fmt, VA_DOTS)
 #else
 Msg(err, fmt, VA_DOTS)
 int err;
-char *fmt;
+const char *fmt;
 VA_DECL
 #endif
 {
@@ -2069,6 +2124,9 @@ VA_DECL
     }
   else
     printf("%s\r\n", buf);
+
+  if (queryflag >= 0)
+    write(queryflag, buf, strlen(buf));
 }
 
 /*
@@ -2077,11 +2135,11 @@ VA_DECL
 void
 /*VARARGS2*/
 #if defined(USEVARARGS) && defined(__STDC__)
-Panic(int err, char *fmt, VA_DOTS)
+Panic(int err, const char *fmt, VA_DOTS)
 #else
 Panic(err, fmt, VA_DOTS)
 int err;
-char *fmt;
+const char *fmt;
 VA_DECL
 #endif
 {
@@ -2125,7 +2183,7 @@ VA_DECL
         if (D_status)
 	  RemoveStatus();
         FinitTerm();
-        Flush();
+        Flush(3);
 #ifdef UTMPOK
         RestoreLoginSlot();
 #endif
@@ -2168,7 +2226,7 @@ static const char months[] = "JanFebMarAprMayJunJulAugSepOctNovDec";
 #endif
 
 static char winmsg_buf[MAXSTR];
-#define MAX_WINMSG_REND 16	/* rendition changes */
+#define MAX_WINMSG_REND 256	/* rendition changes */
 static int winmsg_rend[MAX_WINMSG_REND];
 static int winmsg_rendpos[MAX_WINMSG_REND];
 static int winmsg_numrend;
@@ -2331,7 +2389,7 @@ char **cmdv;
       bt = (struct backtick *)malloc(sizeof *bt);
       if (!bt)
 	{
-	  Msg(0, strnomem);
+	  Msg(0, "%s", strnomem);
           return;
 	}
       bzero(bt, sizeof(*bt));
@@ -2353,7 +2411,7 @@ char **cmdv;
       bt->buf = (char *)malloc(MAXSTR);
       if (bt->buf == 0)
 	{
-	  Msg(0, strnomem);
+	  Msg(0, "%s", strnomem);
 	  setbacktick(num, 0, 0, (char **)0);
           return;
 	}
@@ -2415,6 +2473,22 @@ time_t now;
   (void)time(&now2);
   bt->bestbefore = now2 + bt->lifespan;
   return bt->result;
+}
+
+int
+AddWinMsgRend(str, r)
+const char *str;
+int r;
+{
+  if (winmsg_numrend >= MAX_WINMSG_REND || str < winmsg_buf ||
+      str >= winmsg_buf + MAXSTR)
+    return -1;
+
+  winmsg_rend[winmsg_numrend] = r;
+  winmsg_rendpos[winmsg_numrend] = str - winmsg_buf;
+  winmsg_numrend++;
+
+  return 0;
 }
 
 char *
@@ -2672,9 +2746,7 @@ int rec;
 		oldfore = D_fore;
 		D_fore = win;
 	      }
-	    ss = AddWindows(p, l - 1, (*s == 'w' ? 0 : 1) | (longflg ? 0 : 2) | (plusflg ? 4 : 0), win ? win->w_number : -1);
-	    if (minusflg)
-	       *ss = 0;
+	    ss = AddWindows(p, l - 1, (*s == 'w' ? 0 : 1) | (longflg ? 0 : 2) | (plusflg ? 4 : 0) | (minusflg ? 8 : 0), win ? win->w_number : -1);
 	    if (display)
 	      D_fore = oldfore;
 	  }
@@ -2772,6 +2844,18 @@ int rec;
 	    minusflg = !minusflg;
 	  if (minusflg)
 	    qmflag = 1;
+	  break;
+	case 'P':
+	  p--;
+#ifdef COPY_PASTE
+	  if (display && ev && ev != &D_hstatusev)	/* Hack */
+	    {
+	      /* Is the layer in the current canvas in copy mode? */
+	      struct canvas *cv = (struct canvas *)ev->data;
+	      if (ev == &cv->c_captev && cv->c_layer->l_layfn == &MarkLf)
+		qmflag = 1;
+	    }
+#endif
 	  break;
 	case '>':
 	  truncpos = p - winmsg_buf;
@@ -3156,6 +3240,15 @@ char *data;
 	      p->w_monitor = MON_DONE;
 	    }
 	  WindowChanged(p, 'f');
+	}
+      if (p->w_silence == SILENCE_FOUND)
+	{
+	  /* Unset the flag if the user switched to this window. */
+	  if (p->w_layer.l_cvlist)
+	    {
+	      p->w_silence = SILENCE_ON;
+	      WindowChanged(p, 'f');
+	    }
 	}
     }
 

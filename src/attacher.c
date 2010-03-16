@@ -1,4 +1,4 @@
-/* Copyright (c) 2008
+/* Copyright (c) 2008, 2009
  *      Juergen Weigert (jnweiger@immd4.informatik.uni-erlangen.de)
  *      Michael Schroeder (mlschroe@immd4.informatik.uni-erlangen.de)
  *      Micah Cowan (micah@cowan.name)
@@ -26,12 +26,12 @@
  ****************************************************************
  */
 
+#include "config.h"
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 #include <fcntl.h>
 #include <signal.h>
-#include "config.h"
 #include "screen.h"
 #include "extern.h"
 
@@ -51,9 +51,7 @@ static void  screen_builtin_lck __P((void));
 #ifdef DEBUG
 static sigret_t AttacherChld __P(SIGPROTOARG);
 #endif
-#ifdef MULTIUSER
 static sigret_t AttachSigCont __P(SIGPROTOARG);
-#endif
 
 extern int real_uid, real_gid, eff_uid, eff_gid;
 extern char *SockName, *SockMatch, SockPath[];
@@ -75,7 +73,6 @@ static int multipipe[2];
 #endif
 
 
-#ifdef MULTIUSER
 static int ContinuePlease;
 
 static sigret_t
@@ -85,8 +82,22 @@ AttachSigCont SIGDEFARG
   ContinuePlease = 1;
   SIGRETURN;
 }
-#endif
 
+static int QueryResult;
+
+static sigret_t
+QueryResultSuccess SIGDEFARG
+{
+  QueryResult = 1;
+  SIGRETURN;
+}
+
+static sigret_t
+QueryResultFail SIGDEFARG
+{
+  QueryResult = 2;
+  SIGRETURN;
+}
 
 /*
  *  Send message to a screen backend.
@@ -407,9 +418,7 @@ int how;
 }
 
 
-#if defined(DEBUG) || !defined(DO_NOT_POLL_MASTER)
 static int AttacherPanic = 0;
-#endif
 
 #ifdef DEBUG
 static sigret_t
@@ -444,7 +453,7 @@ AttacherSigInt SIGDEFARG
 }
 
 /*
- * Unfortunatelly this is also the SIGHUP handler, so we have to
+ * Unfortunately this is also the SIGHUP handler, so we have to
  * check if the backend is already detached.
  */
 
@@ -599,7 +608,6 @@ Attacher()
 #endif
   for (;;)
     {
-#ifndef DO_NOT_POLL_MASTER
       signal(SIGALRM, AttacherSigAlarm);
       alarm(15);
       pause();
@@ -609,10 +617,6 @@ Attacher()
 	  debug1("attacher: Panic! MasterPid %d does not exist.\n", MasterPid);
 	  AttacherPanic++;
 	}
-#else
-      pause();
-#endif
-#if defined(DEBUG) || !defined(DO_NOT_POLL_MASTER)
       if (AttacherPanic)
         {
 	  fcntl(0, F_SETFL, 0);
@@ -620,7 +624,6 @@ Attacher()
 	  printf("\nSuddenly the Dungeon collapses!! - You die...\n");
 	  eexit(1);
         }
-#endif
 #ifdef BSDJOBS
       if (SuspendPlease)
 	{
@@ -753,7 +756,7 @@ LockTerminal()
 	      debug2("Lock: %s: return code %d\n", prg, WEXITSTATUS(wstat));
 	    }
           else
-	    printf(LockEnd);
+	    printf("%s", LockEnd);
         }
     }
   else
@@ -935,10 +938,11 @@ screen_builtin_lck()
 
 
 void
-SendCmdMessage(sty, match, av)
+SendCmdMessage(sty, match, av, query)
 char *sty;
 char *match;
 char **av;
+int query;
 {
   int i, s;
   struct msg m;
@@ -966,7 +970,7 @@ char **av;
 	exit(1);
     }
   bzero((char *)&m, sizeof(m));
-  m.type = MSG_COMMAND;
+  m.type = query ? MSG_QUERY : MSG_COMMAND;
   if (attach_tty)
     {
       strncpy(m.m_tty, attach_tty, sizeof(m.m_tty) - 1);
@@ -991,7 +995,59 @@ char **av;
   m.m.command.preselect[sizeof(m.m.command.preselect) - 1] = 0;
   m.m.command.apid = getpid();
   debug1("SendCommandMsg writing '%s'\n", m.m.command.cmd);
-  if (WriteMessage(s, &m))
-    Msg(errno, "write");
-  close(s);
+  if (query)
+    {
+      /* Create a server socket so we can get back the result */
+      char *sp = SockPath + strlen(SockPath);
+      char query[] = "-queryX";
+      char c;
+      int r = -1;
+      for (c = 'A'; c <= 'Z'; c++)
+	{
+	  query[6] = c;
+	  strcpy(sp, query);	/* XXX: strncpy? */
+	  if ((r = MakeServerSocket()) >= 0)
+	    break;
+	}
+      if (r < 0)
+	{
+	  for (c = '0'; c <= '9'; c++)
+	    {
+	      query[6] = c;
+	      strcpy(sp, query);
+	      if ((r = MakeServerSocket()) >= 0)
+		break;
+	    }
+	}
+
+      if (r < 0)
+	Panic(0, "Could not create a listening socket to read the results.");
+
+      strncpy(m.m.command.writeback, SockPath, sizeof(m.m.command.writeback) - 1);
+      m.m.command.writeback[sizeof(m.m.command.writeback) - 1] = '\0';
+
+      /* Send the message, then wait for a response */
+      signal(SIGCONT, QueryResultSuccess);
+      signal(SIG_BYE, QueryResultFail);
+      if (WriteMessage(s, &m))
+	Msg(errno, "write");
+      close(s);
+      while (!QueryResult)
+	pause();
+      signal(SIGCONT, SIG_DFL);
+      signal(SIG_BYE, SIG_DFL);
+
+      /* Read the result and spit it out to stdout */
+      ReceiveRaw(r);
+      unlink(SockPath);
+      if (QueryResult == 2)	/* An error happened */
+	exit(1);
+    }
+  else
+    {
+      if (WriteMessage(s, &m))
+	Msg(errno, "write");
+      close(s);
+    }
 }
+

@@ -1,4 +1,4 @@
-/* Copyright (c) 2008
+/* Copyright (c) 2008, 2009
  *      Juergen Weigert (jnweiger@immd4.informatik.uni-erlangen.de)
  *      Michael Schroeder (mlschroe@immd4.informatik.uni-erlangen.de)
  *      Micah Cowan (micah@cowan.name)
@@ -30,8 +30,6 @@
 #include "config.h"
 #include "screen.h"
 #include "extern.h"
-
-#undef DEBUGG
 
 extern struct display *display, *displays;
 extern int real_uid, real_gid, eff_uid, eff_gid;
@@ -139,7 +137,7 @@ int he;
 
   if ((D_tentry = (char *)malloc(TERMCAP_BUFSIZE + (extra_incap ? strlen(extra_incap) + 1 : 0))) == 0)
     {
-      Msg(0, strnomem);
+      Msg(0, "%s", strnomem);
       return -1;
     }
 
@@ -226,7 +224,8 @@ int he;
       /* ISO2022 */
       if ((D_EA && InStr(D_EA, "\033(B")) || (D_AS && InStr(D_AS, "\033(0")))
 	D_CG0 = 1;
-      if (InStr(D_termname, "xterm") || InStr(D_termname, "rxvt"))
+      if (InStr(D_termname, "xterm") || InStr(D_termname, "rxvt") ||
+	  (D_CKM && InStr(D_CKM, "\033[M")))
 	D_CXT = 1;
       /* "be" seems to be standard for xterms... */
       if (D_CXT)
@@ -261,7 +260,7 @@ int he;
     D_US = D_UE = 0;
   if (D_SG > 0)
     D_SO = D_SE = 0;
-  /* Unfortunatelly there is no 'mg' capability.
+  /* Unfortunately there is no 'mg' capability.
    * For now we think that mg > 0 if sg and ug > 0.
    */
   if (D_UG > 0 && D_SG > 0)
@@ -553,6 +552,8 @@ int map;
       else
 	break;
     }
+  if (n < KMAP_KEYS)
+    domap = 1;
   if (map == 0 && domap)
     return 0;
   if (map && !domap)
@@ -1197,7 +1198,7 @@ char *s;
 
   if ((D_xtable = (char ***)calloc(256, sizeof(char **))) == 0)
     {
-      Msg(0, strnomem);
+      Msg(0, "%s", strnomem);
       return -1;
     }
 
@@ -1215,7 +1216,7 @@ char *s;
         {
           if ((D_xtable[curchar] = (char **)calloc(257, sizeof(char *))) == 0)
 	    {
-	      Msg(0, strnomem);
+	      Msg(0, "%s", strnomem);
 	      FreeTransTable();
 	      return -1;
 	    }
@@ -1249,7 +1250,7 @@ char *s;
 	    l = l * templnsub + templlen;
 	  if ((ctable[c] = (char *)malloc(l + 1)) == 0)
 	    {
-	      Msg(0, strnomem);
+	      Msg(0, "%s", strnomem);
 	      FreeTransTable();
 	      return -1;
 	    }

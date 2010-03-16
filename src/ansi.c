@@ -1,4 +1,4 @@
-/* Copyright (c) 2008
+/* Copyright (c) 2008, 2009
  *      Juergen Weigert (jnweiger@immd4.informatik.uni-erlangen.de)
  *      Michael Schroeder (mlschroe@immd4.informatik.uni-erlangen.de)
  *      Micah Cowan (micah@cowan.name)
@@ -78,8 +78,10 @@ struct mchar mchar_null;
 struct mchar mchar_blank = {' ' /* , 0, 0, ... */};
 struct mchar mchar_so    = {' ', A_SO /* , 0, 0, ... */};
 
+int renditions[NUM_RENDS] = {65529 /* =ub */, 65531 /* =b */, 65533 /* =u */ };
+
 /* keep string_t and string_t_string in sync! */
-static char *string_t_string[] = 
+static char *string_t_string[] =
 {
   "NONE",
   "DCS",			/* Device control string */
@@ -320,7 +322,7 @@ register int len;
       curr->w_monitor = MON_FOUND;
     }
 
-  if (cols && rows)
+  if (cols > 0 && rows > 0)
     {
       do
 	{
@@ -1528,7 +1530,7 @@ StringEnd()
 	}
 #endif
 #ifdef RXVT_OSC
-      if (typ == 0 || typ == 1 || typ == 20 || typ == 39 || typ == 49)
+      if (typ == 0 || typ == 1 || typ == 2 || typ == 20 || typ == 39 || typ == 49)
 	{
 	  int typ2;
 	  typ2 = typ / 10;
@@ -1538,7 +1540,7 @@ StringEnd()
 	    {
 	      strncpy(curr->w_xtermosc[typ2], p, sizeof(curr->w_xtermosc[typ2]) - 1);
 	      curr->w_xtermosc[typ2][sizeof(curr->w_xtermosc[typ2]) - 1] = 0;
-	
+
 	      for (display = displays; display; display = display->d_next)
 		{
 		  if (!D_CXT)
@@ -1672,7 +1674,7 @@ PrintFlush()
       AddCStr(D_PO);
       AddStrn(curr->w_string, curr->w_stringp - curr->w_string);
       AddCStr(D_PF);
-      Flush();
+      Flush(3);
     }
   curr->w_stringp = curr->w_string;
 }
@@ -2933,7 +2935,7 @@ char *str;
   extern struct layer *flayer;
   struct layer *oldflayer = flayer;
   flayer = &p->w_layer;
-  LMsg(err, str);
+  LMsg(err, "%s", str);
   flayer = oldflayer;
 }
 
@@ -3068,7 +3070,7 @@ int what;
 	  p = D_fore;
 	  if (inhstr || (inhstrh && p && p->w_hstatus && *p->w_hstatus && WindowChangedCheck(p->w_hstatus, what, (int *)0)))
 	    RefreshHStatus();
-	  if (ox != -1 && ox != -1)
+	  if (ox != -1 && oy != -1)
 	    GotoPos(ox, oy);
 	}
       display = olddisplay;
@@ -3100,7 +3102,7 @@ int what;
 	}
       if (got && inhstr && p == D_fore)
 	RefreshHStatus();
-      if (ox != -1 && ox != -1)
+      if (ox != -1 && oy != -1)
 	GotoPos(ox, oy);
     }
   display = olddisplay;

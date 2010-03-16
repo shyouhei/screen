@@ -1,4 +1,4 @@
-/* Copyright (c) 2008
+/* Copyright (c) 2008, 2009
  *      Juergen Weigert (jnweiger@immd4.informatik.uni-erlangen.de)
  *      Michael Schroeder (mlschroe@immd4.informatik.uni-erlangen.de)
  *      Micah Cowan (micah@cowan.name)
@@ -24,7 +24,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  ****************************************************************
- * $Id$ FAU
+ * $Id$ GNU
  */
 
 #include <stdio.h>
@@ -41,7 +41,7 @@
 # include <signal.h>
 #endif /* __bsdi__ || __386BSD__ || _CX_UX || hpux || _IBMR2 || linux */
 
-#ifndef HAVE_LONG_FILE_NAMES
+#if !defined(HAVE_LONG_FILE_NAMES) && !defined(NAME_MAX)
 #define NAME_MAX 14
 #endif
 
@@ -232,11 +232,6 @@ extern int errno;
  */
 #if defined(sgi) || defined(DGUX) || defined(_IBMR2)
 # undef TIOCPKT
-#endif
-
-/* linux ncurses is broken, we have to use our own tputs */
-#if defined(linux) && defined(TERMINFO)
-# define tputs xtputs
 #endif
 
 /* Alexandre Oliva: SVR4 style ptys don't work with osf */

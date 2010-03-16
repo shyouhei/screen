@@ -1,4 +1,4 @@
-/* Copyright (c) 2008
+/* Copyright (c) 2008, 2009
  *      Juergen Weigert (jnweiger@immd4.informatik.uni-erlangen.de)
  *      Michael Schroeder (mlschroe@immd4.informatik.uni-erlangen.de)
  *      Micah Cowan (micah@cowan.name)
@@ -24,7 +24,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  ****************************************************************
- * $Id$ FAU
+ * $Id$ GNU
  */
 
 
@@ -166,3 +166,12 @@ IFDWCHAR((mc)->mbcs  = 0;				      ) \
 #  define cole2i(c) ((c) ^ 9)
 # endif
 #endif
+
+enum
+{
+  REND_BELL = 0,
+  REND_MONITOR,
+  REND_SILENCE,
+  NUM_RENDS
+};
+

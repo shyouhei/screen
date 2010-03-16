@@ -1,4 +1,4 @@
-/* Copyright (c) 2008
+/* Copyright (c) 2008, 2009
  *      Juergen Weigert (jnweiger@immd4.informatik.uni-erlangen.de)
  *      Michael Schroeder (mlschroe@immd4.informatik.uni-erlangen.de)
  *      Micah Cowan (micah@cowan.name)
@@ -24,7 +24,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  ****************************************************************
- * $Id$ FAU
+ * $Id$ GNU
  */
 
 /****************************************************************
@@ -530,7 +530,7 @@
  * 2005-12-19, 4.00.03jw3 syntax error.
  */
 
-#define ORIGIN "FAU"
+#define ORIGIN "GNU"
 #define REV 4
 #define VERS 1
 #define PATCHLEVEL 0
