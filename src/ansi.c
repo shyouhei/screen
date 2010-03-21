@@ -940,6 +940,7 @@ register int c;
     case '\n':
       if (curr->w_autoaka)
 	FindAKA();
+    case '\013':	/* Vertical tab is the same as Line Feed */
       LineFeed(0);
       return 1;
     case '\007':
@@ -1374,6 +1375,9 @@ int c, intermediate;
 	      break;
 	    case 3:	/* COLM: column mode */
 	      i = (i ? Z0width : Z1width);
+	      ClearScreen();
+	      curr->w_x = 0;
+	      curr->w_y = 0;
 	      WChangeSize(curr, i, curr->w_height);
 	      cols = curr->w_width;
 	      rows = curr->w_height;
