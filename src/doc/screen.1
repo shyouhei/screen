@@ -1274,28 +1274,45 @@ window and its history into the paste buffer. In this mode a vi-like
 .br
 .in +4n
 .ti -2n
-\fBh\fP, \fBj\fP, \fBk\fP, \fBl\fP move the cursor line by line or 
-column by column.
+\fBh\fP, \fBC-h\fP, or \fBleft arrow\fP move the cursor left.
 .br
 .ti -2n
-\fB0\fP, \fB^\fP and \fB$\fP move to the leftmost column, to the first or last
-non-whitespace character on the line.
+\fBj\fP, \fBC-n\fP, or \fBdown arrow\fP move the cursor down.
+.br
+.ti -2n
+\fBk\fP, \fBC-p\fP, or \fBup arrow\fP move the cursor up.
+.br
+.ti -2n
+\fBl\fP ('el') or \fBright arrow\fP move the cursor right.
+.br
+.ti -2n
+\fB0\fP (zero) or \fBC-a\fP move to the leftmost column.
+.br
+.ti -2n
+\fB+\fP and \fB\-\fP positions one line up and down.
 .br
 .ti -2n
 \fBH\fP, \fBM\fP and \fBL\fP move the cursor to the leftmost column
 of the top, center or bottom line of the window. 
 .br
 .ti -2n
-\fB+\fP and \fB\-\fP positions one line up and down.
-.br
-.ti -2n
-\fBG\fP moves to the specified absolute line (default: end of buffer).
-.br 
-.ti -2n
 \fB|\fP moves to the specified absolute column.
 .br
 .ti -2n
-\fBw\fP, \fBb\fP, \fBe\fP move the cursor word by word.
+\fBg\fP or \fBhome\fP moves to the beginning of the buffer.
+.br
+.ti -2n
+\fBG\fP or \fBend\fP moves to the specified absolute line (default: end of buffer).
+.br 
+.ti -2n
+\fB%\fP jumps to the specified percentage of the buffer.
+.br
+.ti -2n
+\fB^\fP or \fB$\fP move to the leftmost column, to the first or last
+non-whitespace character on the line.
+.br
+.ti -2n
+\fBw\fP, \fBb\fP, and \fBe\fP move the cursor word by word.
 .br 
 .ti -2n
 \fBB\fP, \fBE\fP move the cursor WORD by WORD (as in vi).
@@ -1306,7 +1323,11 @@ of the top, center or bottom line of the window.
 move the cursor to the 3rd 'y' to the right.)
 .br
 .ti -2n
-\fB;\fP \fB,\fP Repeat the last f/F/t/T command in the same/opposite direction.
+\fB;\fP and \fB,\fP Repeat the last f/F/t/T command in the same/opposite direction.
+.br
+.ti -2n
+\fBC-e\fP and \fBC-y\fP scroll the display up/down by one line
+while preserving the cursor position.
 .br
 .ti -2n
 \fBC-u\fP and \fBC-d\fP scroll the display up/down by the specified amount of 
@@ -1314,12 +1335,6 @@ lines while preserving the cursor position. (Default: half screen-full).
 .br
 .ti -2n
 \fBC-b\fP and \fBC-f\fP scroll the display up/down a full screen.
-.br
-.ti -2n
-\fBg\fP moves to the beginning of the buffer.
-.br
-.ti -2n
-\fB%\fP jumps to the specified percentage of the buffer.
 .br
 .ti -4n
 
@@ -1334,11 +1349,12 @@ emacs-style keymap, as this involves multi-character codes.
 .IR Marking :
 .br
 The copy range is specified by setting two marks. The text between these marks 
-will be highlighted. Press 
+will be highlighted. Press:
 .br
 .ti -2n
-\fBspace\fP to set the first or second mark
-respectively.
+\fBspace\fP or \fBenter\fP to set the first or second mark
+respectively. If \fBmousetrack\fP is set to `on', marks can also be set using
+\fPleft mouse click\fP.
 .br
 .ti -2n
 \fBY\fP and \fBy\fP used to mark one whole line or to mark from 
@@ -1370,6 +1386,10 @@ Example: \*QC-a C-[ H 10 j 5 Y\*U will copy lines
 \fBC-a s\fP \fIEmacs\fP style incremental search forward.
 .ti -2n
 \fBC-r\fP \fIEmacs\fP style reverse i-search.
+.ti -2n
+\fBn\fP Find next search pattern.
+.ti -2n
+\fBN\fP Find previous search pattern.
 .ti -4n
 .IR Specials :
 .br
@@ -1378,7 +1398,7 @@ There are however some keys that act differently than in
 .I Vi
 does not allow one to yank rectangular blocks of text, but
 .I screen
-does. Press 
+does. Press: 
 .br
 .ti -2n
 \fBc\fP or \fBC\fP to set the left or right margin respectively. If no repeat count is
@@ -1403,7 +1423,7 @@ whitespace and comma separated lines. Note that you can prepend the newline
 character with a carriage return character, by issuing a \*Qcrlf on\*U.
 .br
 .ti -2n
-\fBv\fP is for all the
+\fBv\fP or \fBV\fP is for all the
 .I vi 
 users with \*Q:set numbers\*U \- it toggles the left margin between column 9
 and 1. Press 
@@ -1427,9 +1447,12 @@ to that file: \*QC-A [ g SPACE G $ >\*U.
 \fBC-g\fP gives information about the current line and column.
 .br
 .ti -2n
-\fBx\fP exchanges the first mark and the current cursor position. You
+\fBx\fP or \fBo\fP exchanges the first mark and the current cursor position. You
 can use this to adjust an already placed mark.
 .br
+.ti -2n
+\fBC-l\fP ('el') will redraw the screen.
+.br 
 .ti -2n
 \fB@\fP does nothing. Does not even exit copy mode.
 .br
@@ -2801,13 +2824,13 @@ Unlinks the screen-exchange file used by the commands \*Qwritebuf\*U and
 \*Qreadbuf\*U. 
 .sp
 .ne 3
-.B "rendition bell" | monitor | so
+.B "rendition bell" | monitor | silence | so
 .RB "\fIattr\fR " [ \fIcolor ]
 .PP
 Change the way
 .I screen
 renders the titles of windows that have monitor or bell flags set in caption or hardstatus or windowlist. See the \*QSTRING ESCAPES\*U chapter for the syntax of the modifiers.
-The default for monitor is currently \*Q=b \*U (bold, active colors) and for bell \*Q=ub \*U (underline, bold and active colors).
+The default for monitor is currently \*Q=b \*U (bold, active colors), for bell \*Q=ub \*U (underline, bold and active colors), and \*Q=u \*U for silence.
 .sp
 .ne 3
 .B "reset"
@@ -3305,9 +3328,7 @@ vice versa.
 .B title
 .RI [ title ]
 .PP
-Display all windows in a table for visual window selection. The
-desired window can be selected via the standard movement keys (see
-the \*Qcopy\*U command) and activated via the return key.
+Display all windows in a table for visual window selection.
 If screen was in a window group, screen will
 back out of the group and then display the windows in that group.
 If the 
@@ -3323,6 +3344,69 @@ The
 option will show the windows inside any groups in that level
 and downwards.
 
+The following keys are used to navigate in \*Qwindowlist\*U:
+.br
+.in +4n
+.ti -2n
+\fBk\fP, \fBC-p\fP, or \fBup\fP Move up one line.
+.br
+.ti -2n
+\fBj\fP, \fBC-n\fP, or \fBdown\fP Move down one line.
+.br
+.ti -2n
+\fBC-g\fP or \fBescape\fP Exit windowlist.
+.br
+.ti -2n
+\fBC-a\fP or \fBhome\fP Move to the first line.
+.br
+.ti -2n
+\fBC-e\fP or \fBend\fP Move to the last line.
+.br
+.ti -2n
+\fBC-u\fP or \fBC-d\fP Move one half page up or down.
+.br
+.ti -2n
+\fBC-b\fP or \fBC-f\fP Move one full page up or down.
+.br
+.ti -2n
+\fBmouseclick\fP Move to the selected line. Available when
+\*Qmousetrack\*U is set to \*Qon\*U
+.br
+.ti -2n
+\fB/\fP Search.
+.br
+.ti -2n
+\fBn\fP Repeat search in the forward direction.
+.br
+.ti -2n
+\fBN\fP Repeat search in the backward direction.
+.br
+.ti -2n
+\fBm\fP Toggle MRU.
+.br
+.ti -2n
+\fBg\fP Toggle group nesting.
+.br
+.ti -2n
+\fBa\fP All window view.
+.br
+.ti -2n
+\fBC-h\fP or backspace Back out the group.
+.br
+.ti -2n
+\fB,\fP Switch numbers with the previous window.
+.br
+.ti -2n
+\fB.\fP Switch numbers with the next window.
+.br
+.ti -2n
+\fBK\fP Kill that window.
+.br
+.ti -2n
+\fBspace\fP or \fBenter\fP Select that window.
+.br
+.in -4n
+
 The table format can be changed with the \fBstring\fP and
 \fBtitle\fP option, the title is displayed as table heading, while
 the lines are made by using the string setting. The default
@@ -3330,6 +3414,9 @@ setting is \*QNum Name%=Flags\*U for the title and \*Q%3n %t%=%f\*U
 for the lines.
 See the \*QSTRING ESCAPES\*U chapter for more codes (e.g. color
 settings).
+
+\*QWindowlist\*U needs a region size of at least 10 characters wide
+and 6 characters high in order to display.
 .sp
 .ne 3
 .B windows
@@ -3503,7 +3590,7 @@ Usually 300, 1200, 9600 or 19200. This affects transmission as well as receive s
 Specify the transmission of eight (or seven) bits per byte.
 .IP "ixon or -ixon"
 Enables (or disables) software flow-control (CTRL-S/CTRL-Q) for sending data.
-.IP "ixoff or -ixon"
+.IP "ixoff or -ixoff"
 Enables (or disables) software flow-control for receiving data.
 .IP "istrip or -istrip"
 Clear (or keep) the eight bit in each received byte.
@@ -4789,10 +4876,19 @@ termcap(5), utmp(5), vi(1), captoinfo(1), tic(1)
 
 .SH AUTHORS
 Originally created by Oliver Laumann, this latest version was
-produced by Wayne Davison, Juergen Weigert and Michael Schroeder.
+produced by Juergen Weigert, Michael Schroeder, Micah Cowan and
+Sadrul Habib Chowdhury.
 
 .SH COPYLEFT
 .nf
+Copyright (c) 2010
+	Juergen Weigert (jnweiger@immd4.informatik.uni-erlangen.de)
+	Sadrul Habib Chowdhury (sadrul@users.sourceforge.net)
+Copyright (c) 2008, 2009
+	Juergen Weigert (jnweiger@immd4.informatik.uni-erlangen.de)
+	Michael Schroeder (mlschroe@immd4.informatik.uni-erlangen.de)
+	Micah Cowan (micah@cowan.name)
+	Sadrul Habib Chowdhury (sadrul@users.sourceforge.net)
 Copyright (C) 1993-2003
 	Juergen Weigert (jnweiger@immd4.informatik.uni-erlangen.de)
 	Michael Schroeder (mlschroe@immd4.informatik.uni-erlangen.de)
@@ -4801,7 +4897,7 @@ Copyright (C) 1987 Oliver Laumann
 .PP
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2, or (at your option)
+the Free Software Foundation; either version 3, or (at your option)
 any later version.
 .PP
 This program is distributed in the hope that it will be useful,

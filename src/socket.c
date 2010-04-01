@@ -1622,6 +1622,30 @@ int ilen;
 }
 #endif
 
+/* 'end' is exclusive, i.e. you should *not* write in *end */
+static char *
+strncpy_escape_quote(dst, src, end)
+char *dst;
+const char *src, *end;
+{
+  while (*src && dst < end)
+    {
+      if (*src == '"')
+	{
+	  if (dst + 2 < end)	/* \\ \" \0 */
+	    *dst++ = '\\';
+	  else
+	    return NULL;
+	}
+      *dst++ = *src++;
+    }
+  if (dst >= end)
+    return NULL;
+
+  *dst = '\0';
+  return dst;
+}
+
 static void
 DoCommandMsg(mp)
 struct msg *mp;
@@ -1645,9 +1669,15 @@ struct msg *mp;
   for (fc = fullcmd; n > 0; n--)
     {
       int len = strlen(p);
-      strncpy(fc, p, fullcmd + sizeof(fullcmd) - fc - 1);
+      *fc++ = '"';
+      if (!(fc = strncpy_escape_quote(fc, p, fullcmd + sizeof(fullcmd) - 2)))	/* '"' ' ' */
+	{
+	  Msg(0, "Remote command too long.");
+	  queryflag = -1;
+	  return;
+	}
       p += len + 1;
-      fc += len;
+      *fc++ = '"';
       *fc++ = ' ';
     }
   if (fc != fullcmd)

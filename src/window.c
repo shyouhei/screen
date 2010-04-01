@@ -2070,6 +2070,8 @@ char *data;
 	continue;
 #endif
       Msg(0, "Window %d: silence for %d seconds", p->w_number, p->w_silencewait);
+      p->w_silence = SILENCE_FOUND;
+      WindowChanged(p, 'f');
     }
 }
 
