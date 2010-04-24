@@ -1,4 +1,4 @@
-/* Copyright (c) 2008
+/* Copyright (c) 2008, 2009
  *      Juergen Weigert (jnweiger@immd4.informatik.uni-erlangen.de)
  *      Michael Schroeder (mlschroe@immd4.informatik.uni-erlangen.de)
  *      Micah Cowan (micah@cowan.name)
@@ -26,10 +26,9 @@
  ****************************************************************
  */
 
-#include <sys/types.h>
-
 #include "config.h"
 
+#include <sys/types.h>
 
 /* XXX: WHY IS THIS HERE?? :XXX */
 
@@ -56,7 +55,7 @@
  ************************************************************************/
 
 extern struct comm comms[];
-extern struct win *windows, *wtab[];
+extern struct win *windows, **wtab;
 extern char NullStr[];
 extern char SockPath[];
 extern struct display *display, *displays;

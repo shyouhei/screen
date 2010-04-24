@@ -1,4 +1,4 @@
-/* Copyright (c) 2008
+/* Copyright (c) 2008, 2009
  *      Juergen Weigert (jnweiger@immd4.informatik.uni-erlangen.de)
  *      Michael Schroeder (mlschroe@immd4.informatik.uni-erlangen.de)
  *      Micah Cowan (micah@cowan.name)
@@ -120,9 +120,9 @@ static struct nlstrans nethacktrans[] = {
 };
 #endif
 
-char *
+const char *
 DoNLS(from)
-char *from;
+const char *from;
 {
 #ifdef NETHACK
   struct nlstrans *t;
