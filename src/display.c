@@ -2217,8 +2217,8 @@ char *str;
     }
   else if (D_has_hstatus == HSTATUS_LASTLINE)
     {
-      int hascaption = (captionalways == CAPTION_ALWAYS) ||
-	  (captionalways == CAPTION_SPLITONLY && D_cvlist && !D_cvlist->c_next);
+      int hascaption = ((captionalways == CAPTION_ALWAYS) ||
+	  (captionalways == CAPTION_SPLITONLY && D_cvlist && D_cvlist->c_next));
       debug("ShowHStatus: using last line\n");
       ox = D_x;
       oy = D_y;
@@ -2227,9 +2227,9 @@ char *str;
       if (l > D_width)
 	l = D_width;
       GotoPos(0, D_height - 1);
-      SetRendition(!hascaption ? &mchar_null: &mchar_so);
+      SetRendition(hascaption ? &mchar_null: &mchar_so);
       l = PrePutWinMsg(str, 0, l);
-      if (hascaption)
+      if (!hascaption)
         while (l++ < D_width)
 	  PUTCHARLP(' ');
       if (l < D_width)
