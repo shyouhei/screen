@@ -1274,28 +1274,45 @@ window and its history into the paste buffer. In this mode a vi-like
 .br
 .in +4n
 .ti -2n
-\fBh\fP, \fBj\fP, \fBk\fP, \fBl\fP move the cursor line by line or 
-column by column.
+\fBh\fP, \fBC-h\fP, or \fBleft arrow\fP move the cursor left.
 .br
 .ti -2n
-\fB0\fP, \fB^\fP and \fB$\fP move to the leftmost column, to the first or last
-non-whitespace character on the line.
+\fBj\fP, \fBC-n\fP, or \fBdown arrow\fP move the cursor down.
+.br
+.ti -2n
+\fBk\fP, \fBC-p\fP, or \fBup arrow\fP move the cursor up.
+.br
+.ti -2n
+\fBl\fP ('el') or \fBright arrow\fP move the cursor right.
+.br
+.ti -2n
+\fB0\fP (zero) or \fBC-a\fP move to the leftmost column.
+.br
+.ti -2n
+\fB+\fP and \fB\-\fP positions one line up and down.
 .br
 .ti -2n
 \fBH\fP, \fBM\fP and \fBL\fP move the cursor to the leftmost column
 of the top, center or bottom line of the window. 
 .br
 .ti -2n
-\fB+\fP and \fB\-\fP positions one line up and down.
-.br
-.ti -2n
-\fBG\fP moves to the specified absolute line (default: end of buffer).
-.br 
-.ti -2n
 \fB|\fP moves to the specified absolute column.
 .br
 .ti -2n
-\fBw\fP, \fBb\fP, \fBe\fP move the cursor word by word.
+\fBg\fP or \fBhome\fP moves to the beginning of the buffer.
+.br
+.ti -2n
+\fBG\fP or \fBend\fP moves to the specified absolute line (default: end of buffer).
+.br 
+.ti -2n
+\fB%\fP jumps to the specified percentage of the buffer.
+.br
+.ti -2n
+\fB^\fP or \fB$\fP move to the leftmost column, to the first or last
+non-whitespace character on the line.
+.br
+.ti -2n
+\fBw\fP, \fBb\fP, and \fBe\fP move the cursor word by word.
 .br 
 .ti -2n
 \fBB\fP, \fBE\fP move the cursor WORD by WORD (as in vi).
@@ -1306,7 +1323,11 @@ of the top, center or bottom line of the window.
 move the cursor to the 3rd 'y' to the right.)
 .br
 .ti -2n
-\fB;\fP \fB,\fP Repeat the last f/F/t/T command in the same/opposite direction.
+\fB;\fP and \fB,\fP Repeat the last f/F/t/T command in the same/opposite direction.
+.br
+.ti -2n
+\fBC-e\fP and \fBC-y\fP scroll the display up/down by one line
+while preserving the cursor position.
 .br
 .ti -2n
 \fBC-u\fP and \fBC-d\fP scroll the display up/down by the specified amount of 
@@ -1314,12 +1335,6 @@ lines while preserving the cursor position. (Default: half screen-full).
 .br
 .ti -2n
 \fBC-b\fP and \fBC-f\fP scroll the display up/down a full screen.
-.br
-.ti -2n
-\fBg\fP moves to the beginning of the buffer.
-.br
-.ti -2n
-\fB%\fP jumps to the specified percentage of the buffer.
 .br
 .ti -4n
 
@@ -1334,11 +1349,12 @@ emacs-style keymap, as this involves multi-character codes.
 .IR Marking :
 .br
 The copy range is specified by setting two marks. The text between these marks 
-will be highlighted. Press 
+will be highlighted. Press:
 .br
 .ti -2n
-\fBspace\fP to set the first or second mark
-respectively.
+\fBspace\fP or \fBenter\fP to set the first or second mark
+respectively. If \fBmousetrack\fP is set to `on', marks can also be set using
+\fPleft mouse click\fP.
 .br
 .ti -2n
 \fBY\fP and \fBy\fP used to mark one whole line or to mark from 
@@ -1370,6 +1386,10 @@ Example: \*QC-a C-[ H 10 j 5 Y\*U will copy lines
 \fBC-a s\fP \fIEmacs\fP style incremental search forward.
 .ti -2n
 \fBC-r\fP \fIEmacs\fP style reverse i-search.
+.ti -2n
+\fBn\fP Find next search pattern.
+.ti -2n
+\fBN\fP Find previous search pattern.
 .ti -4n
 .IR Specials :
 .br
@@ -1378,7 +1398,7 @@ There are however some keys that act differently than in
 .I Vi
 does not allow one to yank rectangular blocks of text, but
 .I screen
-does. Press 
+does. Press: 
 .br
 .ti -2n
 \fBc\fP or \fBC\fP to set the left or right margin respectively. If no repeat count is
@@ -1403,7 +1423,7 @@ whitespace and comma separated lines. Note that you can prepend the newline
 character with a carriage return character, by issuing a \*Qcrlf on\*U.
 .br
 .ti -2n
-\fBv\fP is for all the
+\fBv\fP or \fBV\fP is for all the
 .I vi 
 users with \*Q:set numbers\*U \- it toggles the left margin between column 9
 and 1. Press 
@@ -1427,9 +1447,12 @@ to that file: \*QC-A [ g SPACE G $ >\*U.
 \fBC-g\fP gives information about the current line and column.
 .br
 .ti -2n
-\fBx\fP exchanges the first mark and the current cursor position. You
+\fBx\fP or \fBo\fP exchanges the first mark and the current cursor position. You
 can use this to adjust an already placed mark.
 .br
+.ti -2n
+\fBC-l\fP ('el') will redraw the screen.
+.br 
 .ti -2n
 \fB@\fP does nothing. Does not even exit copy mode.
 .br
@@ -1682,6 +1705,90 @@ why features like color or the alternate charset don't work.
 .PP
 Shows a tabular listing of all currently connected user front-ends (displays).
 This is most useful for multiuser sessions.
+The following keys can be used in displays list:
+.br
+.in +4n
+.ti -2n
+\fBk\fP, \fBC-p\fP, or \fBup\fP Move up one line.
+.br
+.ti -2n
+\fBj\fP, \fBC-n\fP, or \fBdown\fP Move down one line.
+.br
+.ti -2n
+\fBC-a\fP or \fBhome\fP Move to the first line.
+.br
+.ti -2n
+\fBC-e\fP or \fBend\fP Move to the last line.
+.br
+.ti -2n
+\fBC-u\fP or \fBC-d\fP Move one half page up or down.
+.br
+.ti -2n
+\fBC-b\fP or \fBC-f\fP Move one full page up or down.
+.br
+.ti -2n
+\fBmouseclick\fP Move to the selected line. Available
+when \*Qmousetrack\*U is set to on.
+.br
+.ti -2n
+\fBspace\fP Refresh the list
+.br
+.ti -2n
+\fBd\fP Detach that display
+.br
+.ti -2n
+\fBD\fP Power detach that display
+.br
+.ti -2n
+\fBC-g\fP, \fBenter\fP, or \fBescape\fP Exit the list
+.br
+.ti -4n
+.PP
+The following is an example of what \*Qdisplays\*U could look like:
+.IP
+xterm 80x42 jnweiger@/dev/ttyp4     0(m11)   &rWx
+.br
+facit 80x24 mlschroe@/dev/ttyhf nb 11(tcsh)   rwx
+.br
+xterm 80x42 jnhollma@/dev/ttyp5     0(m11)   &R.x
+.br
+ (A)   (B)     (C)     (D)     (E) (F)(G)   (H)(I)
+.PP
+The legend is as follows:
+.br
+(A) The terminal type known by screen for this display.
+.br
+(B) Displays geometry as width x height.
+.br
+(C) Username who is logged in at the display.
+.br
+(D) Device name of the display or the attached device
+.br
+(E) Display is in blocking or nonblocking mode. The available modes are "nb", "NB",
+"Z<", "Z>", and "BL".
+.br
+(F) Number of the window
+.br
+(G) Name/title of window
+.br
+(H) Whether the window is shared
+.br
+(I) Window permissions. Made up of three characters:
+      (1st character)
+         ‘-’ : no read
+         ‘r’ : read
+         ‘R’ : read only due to foreign wlock
+      (2nd character)
+         ‘-’ : no write
+         ‘.’ : write suppressed by foreign wlock
+         ‘w’ : write
+         ‘W’ : own wlock
+      (3rd character)
+         ‘-’ : no execute
+         ‘x’ : execute
+
+\*QDisplays\*U needs a region size of at least 10 characters wide and 5 characters high in
+order to display.
 .sp
 .ne 3
 .BR "digraph " [ \fIpreset [ \fI unicode-value ] ]
@@ -2076,7 +2183,7 @@ If no arguments are given, the current settings are displayed.
 .BR "ignorecase " [ on | off ]
 .PP
 Tell screen to ignore the case of characters in searches. Default is
-`off'.
+`off'. Without any options, the state of ignorecase is toggled.
 .sp
 .ne 3
 .B info
@@ -2372,11 +2479,11 @@ Like mapdefault, but don't even look in the default bindkey table.
 .sp
 .ne 3
 .B maptimeout
-.RI [ timo ]
+.RI [ timeout ]
 .PP
 Set the inter-character timer for input sequence detection to a timeout
 of
-.I timo
+.I timeout
 ms. The default timeout is 300ms. Maptimeout with no arguments shows
 the current setting.
 See also \*Qbindkey\*U.
@@ -2798,8 +2905,9 @@ See also chapter \*QWINDOW TYPES\*U.
 .PP
 Set the size of the scrollback buffer for the current windows to \fInum\fP 
 lines. The default scrollback is 100 lines.
-See also the \*Qdefscrollback\*U command and use \*QC-a i\*U to view the 
-current setting.
+See also the \*Qdefscrollback\*U command and use \*Qinfo\*U to view the
+current setting. To access and use the contents in the scrollback buffer,
+use the \*Qcopy\*U command.
 .sp
 .ne 3
 .BR "select " [ \fIWindowID ]
@@ -3099,7 +3207,7 @@ man page for more information on termcap definitions.
 .PP
 Uses the message line to display the time of day, the host name, and the load
 averages over 1, 5, and 15 minutes (if this is available on your system).
-For window specific information use \*Qinfo\*U.
+For window specific information, use \*Qinfo\*U.
 
 If a string is specified, it changes the format of the time report like it is
 described in the \*QSTRING ESCAPES\*U chapter. Screen uses a default of
@@ -3162,7 +3270,7 @@ Sets the visual bell message. \fImessage\fP is printed to the status line if
 the window receives a bell character (^G), vbell is set to \*Qon\*U, but the 
 terminal does not support a visual bell.
 The default message is \*QWuff, Wuff!!\*U.
-Without parameter, the current message is shown.
+Without a parameter, the current message is shown.
 .sp
 .ne 3
 .BI "vbellwait " sec
@@ -3177,7 +3285,7 @@ visual bell message. The default is 1 second.
 .PP
 If verbose is switched on, the command name is echoed, whenever a window
 is created (or resurrected from zombie state). Default is off.
-Without parameter, the current setting is shown.
+Without a parameter, the current setting is shown.
 .sp
 .ne 3
 .B version
@@ -3262,7 +3370,11 @@ The following keys are used to navigate in \*Qwindowlist\*U:
 \fBC-b\fP or \fBC-f\fP Move one full page up or down.
 .br
 .ti -2n
-\fBmouseclick\fP Move to the selected line.
+\fB0..9\fP Using the number keys, move to the selected line.
+.br
+.ti -2n
+\fBmouseclick\fP Move to the selected line. Available when
+\*Qmousetrack\*U is set to \*Qon\*U
 .br
 .ti -2n
 \fB/\fP Search.
@@ -3336,7 +3448,7 @@ When line-wrap is on, the second consecutive printable character output at
 the last column of a line will wrap to the start of the following line.
 As an added feature, backspace (^H) will also wrap through the left margin
 to the previous line.
-Default is `on'.
+Default is `on'. Without any options, the state of wrap is toggled.
 .sp
 .ne 3
 .B writebuf
@@ -3482,7 +3594,7 @@ Usually 300, 1200, 9600 or 19200. This affects transmission as well as receive s
 Specify the transmission of eight (or seven) bits per byte.
 .IP "ixon or -ixon"
 Enables (or disables) software flow-control (CTRL-S/CTRL-Q) for sending data.
-.IP "ixoff or -ixon"
+.IP "ixoff or -ixoff"
 Enables (or disables) software flow-control for receiving data.
 .IP "istrip or -istrip"
 Clear (or keep) the eight bit in each received byte.
@@ -3502,13 +3614,12 @@ Signals that are logical low (inactive) have their name preceded by
 an exclamation mark (!), otherwise the signal is logical high (active).
 Signals not supported by the hardware but available to the ioctl() interface
 are usually shown low. 
-.br
+.PP
 When the CLOCAL status bit is true, the whole set of modem signals is placed 
 inside curly braces ({ and }).
 When the CRTSCTS or TIOCSOFTCAR bit is set, the signals `CTS' or `CD' 
 are shown in parenthesis, respectively. 
-
-
+.PP
 For tty windows, the command
 .B break
 causes the Data transmission line (TxD) to go low for a specified period of
@@ -3517,6 +3628,7 @@ No data is sent and no modem control line is changed when a
 .B break
 is issued.
 .RE
+
 .IP \(bu
 If the first parameter is \*Q//telnet\*U, the second parameter is expected to
 be a host name, and an optional third parameter may specify a TCP port number
@@ -3581,7 +3693,7 @@ day number
 .IP D
 weekday name
 .IP f
-flags of the window
+flags of the window, see \*Qwindows\*U for meanings of the various flags
 .IP F
 sets %? to true if the window has the focus
 .IP h
@@ -4768,10 +4880,19 @@ termcap(5), utmp(5), vi(1), captoinfo(1), tic(1)
 
 .SH AUTHORS
 Originally created by Oliver Laumann, this latest version was
-produced by Wayne Davison, Juergen Weigert and Michael Schroeder.
+produced by Juergen Weigert, Michael Schroeder, Micah Cowan and
+Sadrul Habib Chowdhury.
 
 .SH COPYLEFT
 .nf
+Copyright (c) 2010
+	Juergen Weigert (jnweiger@immd4.informatik.uni-erlangen.de)
+	Sadrul Habib Chowdhury (sadrul@users.sourceforge.net)
+Copyright (c) 2008, 2009
+	Juergen Weigert (jnweiger@immd4.informatik.uni-erlangen.de)
+	Michael Schroeder (mlschroe@immd4.informatik.uni-erlangen.de)
+	Micah Cowan (micah@cowan.name)
+	Sadrul Habib Chowdhury (sadrul@users.sourceforge.net)
 Copyright (C) 1993-2003
 	Juergen Weigert (jnweiger@immd4.informatik.uni-erlangen.de)
 	Michael Schroeder (mlschroe@immd4.informatik.uni-erlangen.de)
@@ -4780,7 +4901,7 @@ Copyright (C) 1987 Oliver Laumann
 .PP
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2, or (at your option)
+the Free Software Foundation; either version 3, or (at your option)
 any later version.
 .PP
 This program is distributed in the hope that it will be useful,
@@ -4826,7 +4947,7 @@ Pablo Averbuj (pablo@averbuj.com).
 
 
 .SH VERSION
-This is version 4.0.2. Its roots are a merge of a custom version
+This is version 4.1.0. Its roots are a merge of a custom version
 2.3PR7 by Wayne Davison
 and several enhancements to Oliver Laumann's version 2.0. Note that all versions
 numbered 2.x are copyright by Oliver Laumann. 

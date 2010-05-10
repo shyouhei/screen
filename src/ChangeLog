@@ -25,6 +25,8 @@ Version 4.1.0 (??/??/20??):
     a mark and the scroll wheel to scroll through the buffer. Additional
     features might be to allow clicking on window-titles in the caption to
     switch to that window.
+  * All commands prefixed '@' are treated as 'quiet', i.e. '@'-prefixed commands
+    do not trigger any display messages.
 
   Changed Commands:
   * '-v' parameter to 'split' command for vertical splits.
@@ -43,6 +45,7 @@ Version 4.1.0 (??/??/20??):
 
   .screenrc:
   * $PID expands to the PID of the screen session.
+  * $PWD expands to the current working directory of the session.
   * $STY expands to the session name.
   * Tilde-expansion in pathnames (e.g. for the 'source' command)
   * C-style escapes can be used (e.g. "\n" to get a newline with 'stuff')
@@ -102,9 +105,12 @@ Version 4.1.0 (??/??/20??):
   * Christian Ebert <blacktrash@gmx.net>
   * Geraint Edwards <gedge-lists-screen@yadn.org>
   * Romain Francoise <romain@orebokech.com>
+  * Alexander Gattin <xrgtn@yandex.ru>
   * Emanuele Giaquinta <e.giaquinta@glauco.it>
   * Yi-Hsuan Hsin <mhsin@mhsin.org>
+  * Kipling Inscore <kinscore@synaptics.com>
   * Chris Jones <cjns1989@gmail.com>
+  * Max Kalashnikov <mmt@maxkalashnikov.com>
   * Steve Kemp <steve@steve.org.uk>
   * Ryan Niebur <ryan@debian.org>
   * Jan Christoph Nordholz <hesso@pool.math.tu-berlin.de>
