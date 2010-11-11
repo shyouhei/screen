@@ -214,7 +214,7 @@ struct msg
 	  char preselect[20];
 	  int esc;		/* his new escape character unless -1 */
 	  int meta_esc;		/* his new meta esc character unless -1 */
-	  char envterm[20 + 1];	/* terminal type */
+	  char envterm[MAXTERMLEN + 1];	/* terminal type */
 	  int encoding;		/* encoding of display */
 	  int detachfirst;      /* whether to detach remote sessions first */
 	}
