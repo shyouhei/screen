@@ -26,6 +26,13 @@
  ****************************************************************
  */
 
+/*
+ * Length of longest username.
+ */
+#ifndef MAX_USERNAME_LEN
+# define MAX_USERNAME_LEN 50
+#endif
+
 #ifdef MULTIUSER
 
 /* three known bits: */
@@ -78,7 +85,7 @@ struct plop
 typedef struct acluser
 {
   struct acluser *u_next;		/* continue the main user list */
-  char u_name[20+1];		/* login name how he showed up */
+  char u_name[MAX_USERNAME_LEN+1];	/* login name how he showed up */
   char *u_password;		/* his password (may be NullStr). */
   int  u_checkpassword;		/* nonzero if this u_password is valid */
   int  u_detachwin;		/* the window where he last detached */

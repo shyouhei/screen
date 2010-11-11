@@ -182,7 +182,7 @@ struct acluser **up;
 #endif
   (*up)->u_Esc = DefaultEsc;
   (*up)->u_MetaEsc = DefaultMetaEsc;
-  strncpy((*up)->u_name, name, 20);
+  strncpy((*up)->u_name, name, MAX_USERNAME_LEN);
   (*up)->u_password = NULL;
   if (pass)
     (*up)->u_password = SaveStr(pass);
@@ -318,8 +318,8 @@ struct acluser **up;
     return UserAdd(name, pass, up);
   if (!strcmp(name, "nobody"))		/* he remains without password */
     return -1;
-  strncpy((*up)->u_password, pass ? pass : "", 20);
-  (*up)->u_password[20] = '\0';
+  strncpy((*up)->u_password, pass ? pass : "", MAX_USERNAME_LEN);
+  (*up)->u_password[MAX_USERNAME_LEN] = '\0';
   return 0;
 }
 #endif
