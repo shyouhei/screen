@@ -978,7 +978,7 @@ char **av;
 
   if (home == 0 || *home == '\0')
     home = ppp->pw_dir;
-  if (strlen(LoginName) > 20)
+  if (strlen(LoginName) > MAX_USERNAME_LEN)
     Panic(0, "LoginName too long - sorry.");
 #ifdef MULTIUSER
   if (multi && strlen(multi) > 20)

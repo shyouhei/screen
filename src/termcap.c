@@ -72,7 +72,7 @@ char Termcap[TERMCAP_BUFSIZE + 8];	/* new termcap +8:"TERMCAP=" */
 static int Termcaplen;
 static int tcLineLen;
 char Term[MAXSTR+5];		/* +5: "TERM=" */
-char screenterm[MAXSTR];        /* new $TERM, usually "screen" */
+char screenterm[MAXTERMLEN + 1];        /* new $TERM, usually "screen" */
 
 char *extra_incap, *extra_outcap;
 
