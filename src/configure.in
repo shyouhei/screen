@@ -1217,14 +1217,14 @@ AC_HEADER_DIRENT
 
 AC_MSG_CHECKING(for setenv)
 if test -z "$ac_setenv_args"; then
-    AC_TRY_COMPILE(
+    AC_TRY_LINK(
     [#include <stdlib.h>],
     [
         setenv((char *) 0, (char *) 0, 0);
     ], ac_setenv_args=3)
 fi
 if test -z "$ac_setenv_args"; then
-    AC_TRY_COMPILE(
+    AC_TRY_LINK(
     [#include <stdlib.h>],
     [
         setenv((char *) 0, (char *) 0);
@@ -1293,6 +1293,11 @@ dnl Ptx bug workaround -- insert -lc after -ltermcap
 test -n "$seqptx" && LIBS="-ltermcap -lc -lsocket -linet -lnsl -lsec -lseq"
 
 AC_TRY_RUN(main(){exit(0);},,AC_MSG_ERROR(Can't run the compiler - internal error. Sorry.))
+
+ETCSCREENRC=
+AC_MSG_CHECKING(for the global screenrc file)
+AC_ARG_WITH(sys-screenrc, [  --with-sys-screenrc=path to the global screenrc file], [ ETCSCREENRC="${withval}" ])
+AC_SUBST(ETCSCREENRC)
 
 AC_OUTPUT(Makefile doc/Makefile, [[
 # a hook for preserving undef directive in config.h
