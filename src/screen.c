@@ -819,8 +819,8 @@ char **av;
           char *newbuf = malloc(3 * len);
           if (!newbuf)
             Panic(0, "%s", strnomem);
-          newsz = RecodeBuf(nwin_options.aka, len,
-                            nwin_options.encoding, 0, newbuf);
+          newsz = RecodeBuf((unsigned char *)nwin_options.aka, len,
+                            nwin_options.encoding, 0, (unsigned char *)newbuf);
           newbuf[newsz] = '\0';
           nwin_options.aka = newbuf;
         }
@@ -988,7 +988,7 @@ char **av;
     Panic(0, "$HOME too long - sorry.");
 
   attach_tty = "";
-  if (!detached && !lsflag && !cmdflag && !(dflag && !mflag && !rflag && !xflag) && !(!mflag && !SockMatch && sty && !xflag))
+  if (!detached && !lsflag && !cmdflag && !(dflag && !mflag && !rflag && !xflag) && !(sty && !SockMatch && !mflag && !rflag && !xflag))
     {
 #ifndef NAMEDPIPE
       int fl;
@@ -2517,7 +2517,7 @@ int rec;
   int truncpos = -1;
   int truncper = 0;
   int trunclong = 0;
-  struct backtick *bt;
+  struct backtick *bt = NULL;
  
   if (winmsg_numrend >= 0)
     winmsg_numrend = 0;
@@ -2854,6 +2854,11 @@ int rec;
 		qmflag = 1;
 	    }
 #endif
+	  break;
+	case 'E':
+	  p--;
+	  if (display && D_ESCseen)
+	    qmflag = 1;
 	  break;
 	case '>':
 	  truncpos = p - winmsg_buf;
