@@ -408,6 +408,7 @@ int dump;
    */
   register int i, j, k;
   register char *p;
+  register int *pi;
   register FILE *f;
   char fnbuf[1024];
   char *mode = "w";
@@ -528,27 +529,30 @@ int dump;
 		}
 	      if (dump == DUMP_SCROLLBACK)
 		{
+#define DUMP_LINE(line) do	\
+  {	\
+    pi = (line)->image;	\
+    for (k = fore->w_width - 1; k >= 0 && pi[k] == ' '; k--)	\
+      ;	\
+    for (j = 0; j <= k; j++)	\
+      {	\
+	unsigned char str[16];	\
+	int l = EncodeChar(str, pi[j], fore->w_encoding, 0), ll;	\
+	for (ll = 0; ll < l; ll++)	\
+	  putc(str[ll], f);	\
+	if (j < k && dw_left((line), j, fore->w_encoding))	\
+	  j++;	\
+      }	\
+    putc('\n', f);	\
+  } while (0)
+
 #ifdef COPY_PASTE
 		  for (i = 0; i < fore->w_histheight; i++)
-		    {
-		      p = (char *)(WIN(i)->image);
-		      for (k = fore->w_width - 1; k >= 0 && p[k] == ' '; k--)
-			;
-		      for (j = 0; j <= k; j++)
-			putc(p[j], f);
-		      putc('\n', f);
-		    }
+		    DUMP_LINE(WIN(i));
 #endif
 		}
 	      for (i = 0; i < fore->w_height; i++)
-		{
-		  p = (char *)fore->w_mlines[i].image;
-		  for (k = fore->w_width - 1; k >= 0 && p[k] == ' '; k--)
-		    ;
-		  for (j = 0; j <= k; j++)
-		    putc(p[j], f);
-		  putc('\n', f);
-		}
+		DUMP_LINE(fore->w_mlines + i);
 	      break;
 	    case DUMP_TERMCAP:
 	      if ((p = index(MakeTermcap(fore->w_aflag), '=')) != NULL)

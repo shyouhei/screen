@@ -594,7 +594,7 @@ int c;
 # ifdef UTF8
   if (D_encoding == UTF8)
     {
-      c = (c & 255) | (unsigned char)D_rend.font << 8;
+      c = (c & 255) | (unsigned int )D_rend.font << 8;
 #  ifdef DW_CHARS
       if (D_mbcs)
 	{

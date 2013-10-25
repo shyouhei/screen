@@ -1266,7 +1266,7 @@ int pause;
 		  if (layer->l_encoding == UTF8 && xe < vp->v_xe && win)
 		    {
 		      struct mline *ml = win->w_mlines + line;
-		      if (dw_left(ml, xe, UTF8))
+		      if (utf8_isdouble(ml->image[xe]))
 			xe++;
 		    }
 #endif

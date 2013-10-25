@@ -1,4 +1,7 @@
-/* Copyright (c) 2008, 2009
+/* Copyright (c) 2010
+ *      Juergen Weigert (jnweiger@immd4.informatik.uni-erlangen.de)
+ *      Sadrul Habib Chowdhury (sadrul@users.sourceforge.net)
+ * Copyright (c) 2008, 2009
  *      Juergen Weigert (jnweiger@immd4.informatik.uni-erlangen.de)
  *      Michael Schroeder (mlschroe@immd4.informatik.uni-erlangen.de)
  *      Micah Cowan (micah@cowan.name)
@@ -2202,7 +2205,7 @@ static void
 FillWithEs()
 {
   register int i;
-  register unsigned char *p, *ep;
+  register unsigned int *p, *ep;
 
   LClearAll(&curr->w_layer, 1);
   curr->w_y = curr->w_x = 0;
@@ -2253,12 +2256,30 @@ int l;
   WindowChanged((struct win *)0, 'W');
 }
 
+static int
+strncmpint(const char *s, const int *i, int len)
+{
+  while (len--)
+    {
+      if (!*s && !*i)
+	return 0;
+      if (*s < *i)
+	return -1;
+      else if (*s > *i)
+	return 1;
+      s++;
+      i++;
+    }
+  return 0;
+}
+
 static void
 FindAKA()
 {
-  register unsigned char *cp, *line;
+  register unsigned int *cp, *line, *i;
   register struct win *wp = curr;
   register int len = strlen(wp->w_akabuf);
+  char aka[MAXSTR], *paka;
   int y;
 
   y = (wp->w_autoaka > 0 && wp->w_autoaka <= wp->w_height) ? wp->w_autoaka - 1 : wp->w_y;
@@ -2275,7 +2296,7 @@ FindAKA()
 		goto try_line;
 	      return;
 	    }
-	  if (strncmp((char *)cp, wp->w_akabuf, len) == 0)
+	  if (strncmpint(wp->w_akabuf, cp, len) == 0)
 	    break;
 	  cp++;
 	}
@@ -2296,7 +2317,12 @@ FindAKA()
 	    line = cp;
 	  len--;
 	}
-      ChangeAKA(wp, (char *)line, cp - line);
+      if (cp - line > MAXSTR)
+	cp = line + MAXSTR;
+      paka = aka;
+      for (i = line; i < cp; i++)
+	*paka++ = (unsigned char) *i;
+      ChangeAKA(wp, aka, paka - aka);
     }
   else
     wp->w_autoaka = 0;
@@ -2371,11 +2397,11 @@ struct mchar *mc;
 	}
     }
 #ifdef FONT
-  if (mc->font && ml->font == null)
+  if (mc->font && (unsigned char *)ml->font == null)
     {
-      if ((ml->font = (unsigned char *)calloc(p->w_width + 1, 1)) == 0)
+      if ((ml->font = (unsigned int *)calloc(p->w_width + 1, sizeof(int))) == 0)
 	{
-	  ml->font = null;
+	  ml->font = (unsigned int *)null;
 	  p->w_FontL = p->w_charsets[p->w_ss ? p->w_ss : p->w_Charset] = 0;
 	  p->w_FontR = p->w_charsets[p->w_ss ? p->w_ss : p->w_CharsetR] = 0;
 	  mc->font = p->w_rend.font  = 0;
@@ -2516,9 +2542,9 @@ int n, ys, ye, bce;
 	    free(ml->attr);
 	  ml->attr = null;
 #ifdef FONT
-	  if (ml->font != null)
+	  if (ml->font != (unsigned int *)null)
 	    free(ml->font);
-	  ml->font = null;
+	  ml->font = (unsigned int *)null;
 #endif
 #ifdef COLOR
 	  if (ml->color != null)
@@ -2530,7 +2556,7 @@ int n, ys, ye, bce;
 	  ml->colorx = null;
 # endif
 #endif
-	  bclear((char *)ml->image, p->w_width + 1);
+	  bclear((char *)ml->image, (p->w_width + 1) * sizeof(int));
 #ifdef COLOR
 	  if (bce)
 	    MBceLine(p, i, 0, p->w_width, bce);
@@ -2561,9 +2587,9 @@ int n, ys, ye, bce;
 	    free(ml->attr);
 	  ml->attr = null;
 #ifdef FONT
-	  if (ml->font != null)
+	  if (ml->font != (unsigned int *)null)
 	    free(ml->font);
-	  ml->font = null;
+	  ml->font = (unsigned int *)null;
 #endif
 #ifdef COLOR
 	  if (ml->color != null)
@@ -2575,7 +2601,7 @@ int n, ys, ye, bce;
 	  ml->colorx = null;
 # endif
 #endif
-	  bclear((char *)ml->image, p->w_width + 1);
+	  bclear((char *)ml->image, (p->w_width + 1) * sizeof(int));
 #ifdef COLOR
 	  if (bce)
 	    MBceLine(p, i, 0, p->w_width, bce);
@@ -2759,6 +2785,7 @@ int x, y;
   struct mline *ml;
   int i;
   unsigned char *b;
+  unsigned int  *ip;
 
   if (n <= 0)
     return;
@@ -2766,14 +2793,16 @@ int x, y;
   ml = &p->w_mlines[y];
   MKillDwRight(p, ml, x);
   MKillDwLeft(p, ml, x + n - 1);
-  bcopy(s, (char *)ml->image + x, n);
+  ip = ml->image + x;
+  for (i = 0; i <= n; i++)
+    *ip++ = *s++;
   b = ml->attr + x;
   for (i = n; i-- > 0;)
     *b++ = r->attr;
 #ifdef FONT
-  b = ml->font + x;
+  ip = ml->font + x;
   for (i = n; i-- > 0;)
-    *b++ = r->font;
+    *ip++ = r->font;
 #endif
 #ifdef COLOR
   b = ml->color + x;
@@ -2824,7 +2853,7 @@ WAddLineToHist(wp, ml)
 struct win *wp;
 struct mline *ml;
 {
-  register unsigned char *q, *o;
+  register void *q, *o;
   struct mline *hml;
 
   if (wp->w_histheight == 0)
@@ -2835,9 +2864,9 @@ struct mline *ml;
   q = ml->attr; o = hml->attr; hml->attr = q; ml->attr = null;
   if (o != null)
     free(o);
- 
+
 #ifdef FONT
-  q = ml->font; o = hml->font; hml->font = q; ml->font = null;
+  q = ml->font; o = hml->font; hml->font = q; ml->font = (unsigned int *)null;
   if (o != null)
     free(o);
 #endif
@@ -2869,7 +2898,7 @@ int ys, ye;
   debug2("MFindUsedLine: %d %d\n", ye, ys);
   for (y = ye; y >= ys; y--, ml--)
     {
-      if (bcmp((char*)ml->image, blank, p->w_width))
+      if (bcmp((char*)ml->image, blank, p->w_width * sizeof(int)))
 	break;
       if (ml->attr != null && bcmp((char*)ml->attr, null, p->w_width))
 	break;

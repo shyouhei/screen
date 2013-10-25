@@ -400,9 +400,10 @@ int y, x1, x2, doit;
 struct mchar *rend;
 {
   register int cost, dx;
-  register unsigned char *p, *i;
+  register unsigned char *p;
+  register unsigned int  *i;
 #ifdef FONT
-  register unsigned char *f;
+  register unsigned int  *f;
 #endif
 #ifdef COLOR
   register unsigned char *c;
